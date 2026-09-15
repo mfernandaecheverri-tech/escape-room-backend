@@ -8,11 +8,12 @@
     :root {
       --primary: #6366f1;
       --primary-hover: #4f46e5;
+      --warning: #f59e0b;
+      --warning-hover: #d97706;
+      --danger: #ef4444;
       --bg: #0f172a;
       --card-bg: #1e293b;
       --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --danger: #ef4444;
     }
 
     body {
@@ -24,14 +25,11 @@
     }
 
     .container {
-      max-width: 900px;
+      max-width: 950px;
       margin: 0 auto;
     }
 
-    h1, h2 {
-      text-align: center;
-      color: var(--text);
-    }
+    h1, h2 { text-align: center; color: var(--text); }
 
     .grid {
       display: grid;
@@ -71,13 +69,20 @@
       font-weight: bold;
     }
 
-    button:hover {
-      background-color: var(--primary-hover);
+    button:hover { background-color: var(--primary-hover); }
+
+    .btn-warning {
+      background-color: var(--warning);
+      padding: 5px 8px;
+      font-size: 12px;
+      margin-right: 4px;
     }
+    .btn-warning:hover { background-color: var(--warning-hover); }
 
     .btn-danger {
       background-color: var(--danger);
-      padding: 5px 10px;
+      padding: 5px 8px;
+      font-size: 12px;
     }
 
     table {
@@ -92,14 +97,17 @@
       border-bottom: 1px solid #334155;
     }
 
-    th {
-      background-color: #0f172a;
-    }
+    th { background-color: #0f172a; }
 
     .section-title {
       border-bottom: 2px solid var(--primary);
       padding-bottom: 5px;
       margin-top: 40px;
+    }
+
+    .actions-cell {
+      display: flex;
+      gap: 4px;
     }
   </style>
 </head>
@@ -111,14 +119,16 @@
     <h2 class="section-title">1. Gestión de Juegos</h2>
     <div class="grid">
       <div class="card">
-        <h3>Agregar Juego</h3>
+        <h3 id="form-juego-title">Agregar Juego</h3>
         <form id="form-juego">
+          <input type="hidden" id="juego-id">
           <input type="text" id="juego-titulo" placeholder="Título" required>
           <textarea id="juego-desc" placeholder="Descripción"></textarea>
           <input type="number" id="juego-tiempo" placeholder="Tiempo Límite (min)" required>
           <input type="number" id="juego-min" placeholder="Mín. Jugadores" required>
           <input type="number" id="juego-max" placeholder="Máx. Jugadores" required>
-          <button type="submit">Guardar Juego</button>
+          <button type="submit" id="btn-guardar-juego">Guardar Juego</button>
+          <button type="button" id="btn-cancelar-juego" style="display:none; background-color:#64748b;" onclick="resetFormJuego()">Cancelar Edición</button>
         </form>
       </div>
 
@@ -170,11 +180,12 @@
 
   <script>
     const API_URL = '';
+    let juegosData = [];
 
     // CARGAR JUEGOS Y LLENAR TABLA Y SELECT
     async function cargarJuegos() {
       const res = await fetch(`${API_URL}/api/juegos`);
-      const juegos = await res.json();
+      juegosData = await res.json();
       
       const tbody = document.getElementById('tabla-juegos');
       const select = document.getElementById('rol-juego-id');
@@ -182,16 +193,45 @@
       tbody.innerHTML = '';
       select.innerHTML = '<option value="">Selecciona un Juego...</option>';
 
-      juegos.forEach(j => {
+      juegosData.forEach(j => {
         tbody.innerHTML += `
           <tr>
             <td>${j.id}</td>
             <td><b>${j.titulo}</b></td>
-            <td><button class="btn-danger" onclick="eliminarJuego(${j.id})">Desactivar</button></td>
+            <td class="actions-cell">
+              <button class="btn-warning" onclick="prepararEditarJuego(${j.id})">Editar</button>
+              <button class="btn-danger" onclick="eliminarJuego(${j.id})">Desactivar</button>
+            </td>
           </tr>
         `;
         select.innerHTML += `<option value="${j.id}">${j.titulo}</option>`;
       });
+    }
+
+    // PREPARAR FORMULARIO PARA EDITAR
+    function prepararEditarJuego(id) {
+      const juego = juegosData.find(j => j.id === id);
+      if (!juego) return;
+
+      document.getElementById('juego-id').value = juego.id;
+      document.getElementById('juego-titulo').value = juego.titulo;
+      document.getElementById('juego-desc').value = juego.descripcion || '';
+      document.getElementById('juego-tiempo').value = juego.tiempo_limite_minutos;
+      document.getElementById('juego-min').value = juego.min_jugadores;
+      document.getElementById('juego-max').value = juego.max_jugadores;
+
+      document.getElementById('form-juego-title').innerText = 'Editar Juego #' + juego.id;
+      document.getElementById('btn-guardar-juego').innerText = 'Actualizar Juego';
+      document.getElementById('btn-cancelar-juego').style.display = 'block';
+    }
+
+    // RESETEAR FORMULARIO DE JUEGO
+    function resetFormJuego() {
+      document.getElementById('form-juego').reset();
+      document.getElementById('juego-id').value = '';
+      document.getElementById('form-juego-title').innerText = 'Agregar Juego';
+      document.getElementById('btn-guardar-juego').innerText = 'Guardar Juego';
+      document.getElementById('btn-cancelar-juego').style.display = 'none';
     }
 
     // CARGAR ROLES Y LLENAR TABLA
@@ -213,21 +253,35 @@
       });
     }
 
-    // AGREGAR JUEGO
+    // GUARDAR O ACTUALIZAR JUEGO (POST / PUT)
     document.getElementById('form-juego').addEventListener('submit', async (e) => {
       e.preventDefault();
-      await fetch(`${API_URL}/api/juegos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          titulo: document.getElementById('juego-titulo').value,
-          descripcion: document.getElementById('juego-desc').value,
-          tiempo_limite_minutos: document.getElementById('juego-tiempo').value,
-          min_jugadores: document.getElementById('juego-min').value,
-          max_jugadores: document.getElementById('juego-max').value
-        })
-      });
-      e.target.reset();
+      const id = document.getElementById('juego-id').value;
+      const data = {
+        titulo: document.getElementById('juego-titulo').value,
+        descripcion: document.getElementById('juego-desc').value,
+        tiempo_limite_minutos: document.getElementById('juego-tiempo').value,
+        min_jugadores: document.getElementById('juego-min').value,
+        max_jugadores: document.getElementById('juego-max').value
+      };
+
+      if (id) {
+        // Modo PUT (Editar)
+        await fetch(`${API_URL}/api/juegos/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      } else {
+        // Modo POST (Crear)
+        await fetch(`${API_URL}/api/juegos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      }
+
+      resetFormJuego();
       cargarJuegos();
     });
 
