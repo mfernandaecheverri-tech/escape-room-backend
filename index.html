@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestor Escape Room - CRUD API</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--primary);
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text-muted);
+      font-size: 0.9em;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #fff;
+      box-sizing: border-box;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .row .form-group {
+      flex: 1;
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-cancel {
+      background-color: #64748b;
+    }
+
+    .btn-danger {
+      background-color: var(--danger);
+    }
+
+    .btn-warning {
+      background-color: var(--warning);
+      color: #000;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #334155;
+    }
+
+    th {
+      background-color: #0f172a;
+      color: var(--primary);
+    }
+
+    .actions {
+      display: flex;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Gestor de Escape Rooms</h1>
+
+    <!-- Formulario para Crear / Editar -->
+    <div class="card">
+      <h2 id="form-title">Agregar Nuevo Juego</h2>
+      <form id="juego-form">
+        <input type="hidden" id="juego-id">
+
+        <div class="form-group">
+          <label>Título del Juego</label>
+          <input type="text" id="titulo" required placeholder="Ej: La Cripta Olvidada">
+        </div>
+
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea id="descripcion" rows="3" required placeholder="Detalles de la experiencia..."></textarea>
+        </div>
+
+        <div class="row">
+          <div class="form-group">
+            <label>Tiempo Límite (Minutos)</label>
+            <input type="number" id="tiempo_limite_minutos" required min="10" value="60">
+          </div>
+          <div class="form-group">
+            <label>Mín. Jugadores</label>
+            <input type="number" id="min_jugadores" required min="1" value="2">
+          </div>
+          <div class="form-group">
+            <label>Máx. Jugadores</label>
+            <input type="number" id="max_jugadores" required min="1" value="6">
+          </div>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <button type="submit" id="btn-save">Guardar Juego</button>
+          <button type="button" id="btn-cancel" class="btn-cancel" style="display:none;" onclick="resetForm()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Lista de Juegos -->
+    <div class="card">
+      <h2>Catálogo Disponible</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Título</th>
+            <th>Tiempo</th>
+            <th>Jugadores</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-juegos">
+          <tr><td colspan="5">Cargando juegos...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // URL Base de tu API en Render
+    const API_URL = 'https://escape-room-backend-txxx.onrender.com/api/juegos';
+
+    // Cargar los juegos al iniciar
+    document.addEventListener('DOMContentLoaded', obtenerJuegos);
+
+    const form = document.getElementById('juego-form');
+
+    // GET: Obtener todos los juegos
+    async function obtenerJuegos() {
+      try {
+        const res = await fetch(API_URL);
+        const juegos = await res.json();
+
+        const tbody = document.getElementById('tabla-juegos');
+        tbody.innerHTML = '';
+
+        if (juegos.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5">No hay juegos registrados.</td></tr>';
+          return;
+        }
+
+        juegos.forEach(juego => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${juego.id}</td>
+              <td><strong>${juego.titulo}</strong><br><small style="color:#94a3b8">${juego.descripcion}</small></td>
+              <td>${juego.tiempo_limite_minutos} min</td>
+              <td>${juego.min_jugadores} - ${juego.max_jugadores}</td>
+              <td>
+                <div class="actions">
+                  <button class="btn-warning" onclick='prepararEdicion(${JSON.stringify(juego)})'>Editar</button>
+                  <button class="btn-danger" onclick="eliminarJuego(${juego.id})">Borrar</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+      } catch (error) {
+        console.error('Error al obtener juegos:', error);
+      }
+    }
+
+    // POST / PUT: Crear o Actualizar Juego
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const id = document.getElementById('juego-id').value;
+      const juegoData = {
+        titulo: document.getElementById('titulo').value,
+        descripcion: document.getElementById('descripcion').value,
+        tiempo_limite_minutos: parseInt(document.getElementById('tiempo_limite_minutos').value),
+        min_jugadores: parseInt(document.getElementById('min_jugadores').value),
+        max_jugadores: parseInt(document.getElementById('max_jugadores').value),
+        es_activo: 1
+      };
+
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `${API_URL}/${id}` : API_URL;
+
+      try {
+        const res = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(juegoData)
+        });
+
+        if (res.ok) {
+          resetForm();
+          obtenerJuegos();
+        } else {
+          alert('Ocurrió un error al guardar');
+        }
+      } catch (error) {
+        console.error('Error en el guardado:', error);
+      }
+    });
+
+    // DELETE: Eliminar Juego
+    async function eliminarJuego(id) {
+      if (confirm('¿Estás seguro de que deseas eliminar este juego?')) {
+        try {
+          const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            obtenerJuegos();
+          } else {
+            alert('Error al eliminar');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+    }
+
+    // Cargar datos en el formulario para editar
+    function prepararEdicion(juego) {
+      document.getElementById('juego-id').value = juego.id;
+      document.getElementById('titulo').value = juego.titulo;
+      document.getElementById('descripcion').value = juego.descripcion;
+      document.getElementById('tiempo_limite_minutos').value = juego.tiempo_limite_minutos;
+      document.getElementById('min_jugadores').value = juego.min_jugadores;
+      document.getElementById('max_jugadores').value = juego.max_jugadores;
+
+      document.getElementById('form-title').innerText = 'Editar Juego #' + juego.id;
+      document.getElementById('btn-save').innerText = 'Actualizar Juego';
+      document.getElementById('btn-cancel').style.display = 'inline-block';
+    }
+
+    // Limpiar Formulario
+    function resetForm() {
+      document.getElementById('juego-id').value = '';
+      form.reset();
+      document.getElementById('form-title').innerText = 'Agregar Nuevo Juego';
+      document.getElementById('btn-save').innerText = 'Guardar Juego';
+      document.getElementById('btn-cancel').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

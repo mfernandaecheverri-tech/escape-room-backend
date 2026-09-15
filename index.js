@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const db = require('./db');
@@ -10,9 +11,12 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// 1. RUTA RAÍZ
+// Servir el archivo index.html y archivos estáticos
+app.use(express.static(__dirname));
+
+// 1. RUTA RAÍZ (Entrega la interfaz gráfica HTML)
 app.get('/', (req, res) => {
-  res.json({ mensaje: 'API del Escape Room funcionando correctamente' });
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // 2. READ: Obtener todos los juegos
@@ -54,7 +58,7 @@ app.put('/api/juegos/:id', async (req, res) => {
   }
 });
 
-// 5. DELETE: Soft Delete (Desactivar juego sin romper integridad)
+// 5. DELETE: Soft Delete (Desactivar juego)
 app.delete('/api/juegos/:id', async (req, res) => {
   const { id } = req.params;
   try {
