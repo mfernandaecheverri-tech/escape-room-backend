@@ -11,15 +11,15 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Servir el archivo index.html y archivos estáticos
+// Servir archivos estáticos (HTML, CSS, JS)
 app.use(express.static(__dirname));
 
-// 1. RUTA RAÍZ (Entrega la interfaz gráfica HTML)
+// RUTA RAÍZ (Entrega la interfaz gráfica HTML)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 2. READ: Obtener todos los juegos
+// READ: Obtener todos los juegos activos
 app.get('/api/juegos', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM juegos WHERE es_activo = TRUE');
@@ -29,7 +29,7 @@ app.get('/api/juegos', async (req, res) => {
   }
 });
 
-// 3. CREATE: Crear un nuevo juego
+// CREATE: Crear un nuevo juego
 app.post('/api/juegos', async (req, res) => {
   const { titulo, descripcion, tiempo_limite_minutos, min_jugadores, max_jugadores } = req.body;
   try {
@@ -43,7 +43,7 @@ app.post('/api/juegos', async (req, res) => {
   }
 });
 
-// 4. UPDATE: Actualizar un juego existente
+// UPDATE: Actualizar un juego existente
 app.put('/api/juegos/:id', async (req, res) => {
   const { id } = req.params;
   const { titulo, descripcion, tiempo_limite_minutos, min_jugadores, max_jugadores } = req.body;
@@ -58,12 +58,51 @@ app.put('/api/juegos/:id', async (req, res) => {
   }
 });
 
-// 5. DELETE: Soft Delete (Desactivar juego)
+// DELETE: Soft Delete (Desactivar juego)
 app.delete('/api/juegos/:id', async (req, res) => {
   const { id } = req.params;
   try {
     await db.query('UPDATE juegos SET es_activo = FALSE WHERE id = ?', [id]);
     res.json({ mensaje: 'Juego desactivado exitosamente (Soft Delete)' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// READ: Obtener todos los roles con el título del juego asociado
+app.get('/api/roles-juego', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT r.*, j.titulo AS nombre_juego 
+      FROM roles_juego r 
+      JOIN juegos j ON r.juego_id = j.id
+    `);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// CREATE: Crear un nuevo rol de juego
+app.post('/api/roles-juego', async (req, res) => {
+  const { juego_id, nombre_rol, descripcion } = req.body;
+  try {
+    const [result] = await db.query(
+      'INSERT INTO roles_juego (juego_id, nombre_rol, descripcion) VALUES (?, ?, ?)',
+      [juego_id, nombre_rol, descripcion]
+    );
+    res.status(201).json({ mensaje: 'Rol de juego creado exitosamente', id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE: Eliminar un rol de juego
+app.delete('/api/roles-juego/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query('DELETE FROM roles_juego WHERE id = ?', [id]);
+    res.json({ mensaje: 'Rol de juego eliminado exitosamente' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
