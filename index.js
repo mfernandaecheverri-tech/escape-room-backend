@@ -19,6 +19,10 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// ==========================================
+// 1. RUTAS CRUD PARA JUEGOS
+// ==========================================
+
 // READ: Obtener todos los juegos activos
 app.get('/api/juegos', async (req, res) => {
   try {
@@ -69,6 +73,10 @@ app.delete('/api/juegos/:id', async (req, res) => {
   }
 });
 
+// ==========================================
+// 2. RUTAS CRUD PARA ROLES_JUEGO
+// ==========================================
+
 // READ: Obtener todos los roles con el título del juego asociado
 app.get('/api/roles-juego', async (req, res) => {
   try {
@@ -92,6 +100,21 @@ app.post('/api/roles-juego', async (req, res) => {
       [juego_id, nombre_rol, descripcion]
     );
     res.status(201).json({ mensaje: 'Rol de juego creado exitosamente', id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// UPDATE: Actualizar un rol de juego
+app.put('/api/roles-juego/:id', async (req, res) => {
+  const { id } = req.params;
+  const { juego_id, nombre_rol, descripcion } = req.body;
+  try {
+    await db.query(
+      'UPDATE roles_juego SET juego_id = ?, nombre_rol = ?, descripcion = ? WHERE id = ?',
+      [juego_id, nombre_rol, descripcion, id]
+    );
+    res.json({ mensaje: 'Rol de juego actualizado exitosamente' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -75,7 +75,6 @@
       background-color: var(--warning);
       padding: 5px 8px;
       font-size: 12px;
-      margin-right: 4px;
     }
     .btn-warning:hover { background-color: var(--warning-hover); }
 
@@ -139,7 +138,7 @@
             <tr>
               <th>ID</th>
               <th>Título</th>
-              <th>Acción</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="tabla-juegos"></tbody>
@@ -151,14 +150,16 @@
     <h2 class="section-title">2. Gestión de Roles de Juego</h2>
     <div class="grid">
       <div class="card">
-        <h3>Agregar Rol a Juego</h3>
+        <h3 id="form-rol-title">Agregar Rol a Juego</h3>
         <form id="form-rol">
+          <input type="hidden" id="rol-id">
           <select id="rol-juego-id" required>
             <option value="">Selecciona un Juego...</option>
           </select>
           <input type="text" id="rol-nombre" placeholder="Nombre del Rol (ej: Hacker)" required>
           <textarea id="rol-desc" placeholder="Descripción del Rol"></textarea>
-          <button type="submit">Guardar Rol</button>
+          <button type="submit" id="btn-guardar-rol">Guardar Rol</button>
+          <button type="button" id="btn-cancelar-rol" style="display:none; background-color:#64748b;" onclick="resetFormRol()">Cancelar Edición</button>
         </form>
       </div>
 
@@ -169,7 +170,7 @@
             <tr>
               <th>Rol</th>
               <th>Juego</th>
-              <th>Acción</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="tabla-roles"></tbody>
@@ -181,6 +182,7 @@
   <script>
     const API_URL = '';
     let juegosData = [];
+    let rolesData = [];
 
     // CARGAR JUEGOS Y LLENAR TABLA Y SELECT
     async function cargarJuegos() {
@@ -208,7 +210,7 @@
       });
     }
 
-    // PREPARAR FORMULARIO PARA EDITAR
+    // PREPARAR FORMULARIO PARA EDITAR JUEGO
     function prepararEditarJuego(id) {
       const juego = juegosData.find(j => j.id === id);
       if (!juego) return;
@@ -225,7 +227,6 @@
       document.getElementById('btn-cancelar-juego').style.display = 'block';
     }
 
-    // RESETEAR FORMULARIO DE JUEGO
     function resetFormJuego() {
       document.getElementById('form-juego').reset();
       document.getElementById('juego-id').value = '';
@@ -237,20 +238,46 @@
     // CARGAR ROLES Y LLENAR TABLA
     async function cargarRoles() {
       const res = await fetch(`${API_URL}/api/roles-juego`);
-      const roles = await res.json();
+      rolesData = await res.json();
       
       const tbody = document.getElementById('tabla-roles');
       tbody.innerHTML = '';
 
-      roles.forEach(r => {
+      rolesData.forEach(r => {
         tbody.innerHTML += `
           <tr>
             <td><b>${r.nombre_rol}</b></td>
             <td>${r.nombre_juego}</td>
-            <td><button class="btn-danger" onclick="eliminarRol(${r.id})">Borrar</button></td>
+            <td class="actions-cell">
+              <button class="btn-warning" onclick="prepararEditarRol(${r.id})">Editar</button>
+              <button class="btn-danger" onclick="eliminarRol(${r.id})">Borrar</button>
+            </td>
           </tr>
         `;
       });
+    }
+
+    // PREPARAR FORMULARIO PARA EDITAR ROL
+    function prepararEditarRol(id) {
+      const rol = rolesData.find(r => r.id === id);
+      if (!rol) return;
+
+      document.getElementById('rol-id').value = rol.id;
+      document.getElementById('rol-juego-id').value = rol.juego_id;
+      document.getElementById('rol-nombre').value = rol.nombre_rol;
+      document.getElementById('rol-desc').value = rol.descripcion || '';
+
+      document.getElementById('form-rol-title').innerText = 'Editar Rol #' + rol.id;
+      document.getElementById('btn-guardar-rol').innerText = 'Actualizar Rol';
+      document.getElementById('btn-cancelar-rol').style.display = 'block';
+    }
+
+    function resetFormRol() {
+      document.getElementById('form-rol').reset();
+      document.getElementById('rol-id').value = '';
+      document.getElementById('form-rol-title').innerText = 'Agregar Rol a Juego';
+      document.getElementById('btn-guardar-rol').innerText = 'Guardar Rol';
+      document.getElementById('btn-cancelar-rol').style.display = 'none';
     }
 
     // GUARDAR O ACTUALIZAR JUEGO (POST / PUT)
@@ -266,14 +293,12 @@
       };
 
       if (id) {
-        // Modo PUT (Editar)
         await fetch(`${API_URL}/api/juegos/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
       } else {
-        // Modo POST (Crear)
         await fetch(`${API_URL}/api/juegos`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -285,19 +310,31 @@
       cargarJuegos();
     });
 
-    // AGREGAR ROL
+    // GUARDAR O ACTUALIZAR ROL (POST / PUT)
     document.getElementById('form-rol').addEventListener('submit', async (e) => {
       e.preventDefault();
-      await fetch(`${API_URL}/api/roles-juego`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          juego_id: document.getElementById('rol-juego-id').value,
-          nombre_rol: document.getElementById('rol-nombre').value,
-          descripcion: document.getElementById('rol-desc').value
-        })
-      });
-      e.target.reset();
+      const id = document.getElementById('rol-id').value;
+      const data = {
+        juego_id: document.getElementById('rol-juego-id').value,
+        nombre_rol: document.getElementById('rol-nombre').value,
+        descripcion: document.getElementById('rol-desc').value
+      };
+
+      if (id) {
+        await fetch(`${API_URL}/api/roles-juego/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      } else {
+        await fetch(`${API_URL}/api/roles-juego`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      }
+
+      resetFormRol();
       cargarRoles();
     });
 
