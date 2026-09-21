@@ -3,360 +3,270 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestor Escape Room</title>
+  <title>Escape Room - 16 Bit Edition</title>
+  <!-- Fuente Retro 16-bits -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --warning: #f59e0b;
-      --warning-hover: #d97706;
-      --danger: #ef4444;
-      --bg: #0f172a;
-      --card-bg: #1e293b;
-      --text: #f8fafc;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Press Start 2P', cursive;
+      image-rendering: pixelated; /* Mantiene bordes nítidos de 16-bit */
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 950px;
-      margin: 0 auto;
-    }
-
-    h1, h2 { text-align: center; color: var(--text); }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 30px;
-    }
-
-    .card {
-      background-color: var(--card-bg);
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    }
-
-    form {
+      background-color: #0d0d15;
+      color: #ffffff;
       display: flex;
       flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Contenedor Principal con marco retro */
+    #game-container {
+      width: 960px;
+      height: 600px;
+      background-color: #1a1a24;
+      border: 6px solid #4a4a68;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 10px #000;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Encabezado HUD */
+    header {
+      background-color: #2b2b3a;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 4px solid #4a4a68;
+      font-size: 12px;
+    }
+
+    .timer {
+      color: #ff4757;
+      text-shadow: 2px 2px #000;
+    }
+
+    .room-code {
+      color: #2ed573;
+    }
+
+    /* Área del Escenario / Canvas */
+    #main-stage {
+      flex: 1;
+      position: relative;
+      background: #111118;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Secciones intercambiables */
+    .screen {
+      display: none;
+      width: 100%;
+      height: 100%;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    /* Botones Retro */
+    .btn-pixel {
+      background-color: #ff6b81;
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      margin: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      box-shadow: 0 5px 0 #b33939;
+      transition: all 0.1s;
+    }
+
+    .btn-pixel:active {
+      transform: translateY(5px);
+      box-shadow: 0 0 0 #b33939;
+    }
+
+    .btn-pixel.green {
+      background-color: #2ed573;
+      box-shadow: 0 5px 0 #20bf6b;
+    }
+
+    /* Inputs Pixelated */
+    input[type="text"] {
+      background: #000;
+      border: 3px solid #4a4a68;
+      color: #2ed573;
+      padding: 10px;
+      font-size: 14px;
+      text-align: center;
+      margin: 10px;
+      outline: none;
+    }
+
+    /* HUD Inferior: Inventario e Historial */
+    footer {
+      height: 120px;
+      background-color: #2b2b3a;
+      border-top: 4px solid #4a4a68;
+      display: flex;
+      padding: 10px;
       gap: 10px;
     }
 
-    input, textarea, select {
-      padding: 10px;
-      border-radius: 5px;
-      border: 1px solid #334155;
-      background-color: #0f172a;
-      color: var(--text);
+    .inventory-panel {
+      flex: 1;
+      border: 2px dashed #4a4a68;
+      padding: 8px;
     }
 
-    button {
-      padding: 10px;
-      background-color: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
+    .inventory-title {
+      font-size: 10px;
+      color: #eccc68;
+      margin-bottom: 8px;
     }
 
-    button:hover { background-color: var(--primary-hover); }
-
-    .btn-warning {
-      background-color: var(--warning);
-      padding: 5px 8px;
-      font-size: 12px;
-    }
-    .btn-warning:hover { background-color: var(--warning-hover); }
-
-    .btn-danger {
-      background-color: var(--danger);
-      padding: 5px 8px;
-      font-size: 12px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    th, td {
-      padding: 10px;
-      text-align: left;
-      border-bottom: 1px solid #334155;
-    }
-
-    th { background-color: #0f172a; }
-
-    .section-title {
-      border-bottom: 2px solid var(--primary);
-      padding-bottom: 5px;
-      margin-top: 40px;
-    }
-
-    .actions-cell {
+    .inventory-slots {
       display: flex;
-      gap: 4px;
+      gap: 10px;
+    }
+
+    .slot {
+      width: 40px;
+      height: 40px;
+      background-color: #1a1a24;
+      border: 2px solid #57606f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .log-panel {
+      flex: 1;
+      border: 2px solid #4a4a68;
+      background: #000;
+      padding: 8px;
+      font-size: 8px;
+      line-height: 1.4;
+      overflow-y: auto;
+      color: #ffa502;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Control General de Escape Room</h1>
 
-    <!-- SECCIÓN 1: JUEGOS -->
-    <h2 class="section-title">1. Gestión de Juegos</h2>
-    <div class="grid">
-      <div class="card">
-        <h3 id="form-juego-title">Agregar Juego</h3>
-        <form id="form-juego">
-          <input type="hidden" id="juego-id">
-          <input type="text" id="juego-titulo" placeholder="Título" required>
-          <textarea id="juego-desc" placeholder="Descripción"></textarea>
-          <input type="number" id="juego-tiempo" placeholder="Tiempo Límite (min)" required>
-          <input type="number" id="juego-min" placeholder="Mín. Jugadores" required>
-          <input type="number" id="juego-max" placeholder="Máx. Jugadores" required>
-          <button type="submit" id="btn-guardar-juego">Guardar Juego</button>
-          <button type="button" id="btn-cancelar-juego" style="display:none; background-color:#64748b;" onclick="resetFormJuego()">Cancelar Edición</button>
-        </form>
+  <div id="game-container">
+    <!-- Barra Superior / HUD -->
+    <header>
+      <div>SALA: <span id="lbl-codigo" class="room-code">------</span></div>
+      <div class="timer">TIEMPO: <span id="lbl-tiempo">60:00</span></div>
+      <div>ROL: <span id="lbl-rol" style="color:#70a1ff;">NINGUNO</span></div>
+    </header>
+
+    <!-- Área Principal de Pantallas -->
+    <div id="main-stage">
+      
+      <!-- Pantalla 1: Menú Inicial -->
+      <div id="screen-menu" class="screen active">
+        <h1 style="color: #ff4757; font-size: 20px; margin-bottom: 20px;">ESCAPE ROOM 16-BIT</h1>
+        <input type="text" id="txt-codigo" placeholder="CÓDIGO DE SALA" maxlength="10">
+        <div>
+          <button class="btn-pixel green" onclick="unirseASala()">UNIRSE A SALA</button>
+          <button class="btn-pixel" onclick="crearSala()">CREAR SALA</button>
+        </div>
       </div>
 
-      <div class="card">
-        <h3>Lista de Juegos</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Título</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-juegos"></tbody>
-        </table>
+      <!-- Pantalla 2: Sala de Juego (Canvas 16-bit) -->
+      <div id="screen-game" class="screen">
+        <canvas id="gameCanvas" width="800" height="380" style="background: #000; border: 2px solid #fff;"></canvas>
       </div>
+
     </div>
 
-    <!-- SECCIÓN 2: ROLES DE JUEGO -->
-    <h2 class="section-title">2. Gestión de Roles de Juego</h2>
-    <div class="grid">
-      <div class="card">
-        <h3 id="form-rol-title">Agregar Rol a Juego</h3>
-        <form id="form-rol">
-          <input type="hidden" id="rol-id">
-          <select id="rol-juego-id" required>
-            <option value="">Selecciona un Juego...</option>
-          </select>
-          <input type="text" id="rol-nombre" placeholder="Nombre del Rol (ej: Hacker)" required>
-          <textarea id="rol-desc" placeholder="Descripción del Rol"></textarea>
-          <button type="submit" id="btn-guardar-rol">Guardar Rol</button>
-          <button type="button" id="btn-cancelar-rol" style="display:none; background-color:#64748b;" onclick="resetFormRol()">Cancelar Edición</button>
-        </form>
+    <!-- Barra Inferior / Inventario y Logs -->
+    <footer>
+      <div class="inventory-panel">
+        <div class="inventory-title">INVENTARIO</div>
+        <div class="inventory-slots">
+          <div class="slot" id="slot-1"></div>
+          <div class="slot" id="slot-2"></div>
+          <div class="slot" id="slot-3"></div>
+          <div class="slot" id="slot-4"></div>
+        </div>
       </div>
-
-      <div class="card">
-        <h3>Lista de Roles</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Rol</th>
-              <th>Juego</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-roles"></tbody>
-        </table>
+      <div class="log-panel" id="log-box">
+        > Sistema iniciado...<br>
+        > Esperando conexión a sala...
       </div>
-    </div>
+    </footer>
   </div>
 
   <script>
-    const API_URL = '';
-    let juegosData = [];
-    let rolesData = [];
-
-    // CARGAR JUEGOS Y LLENAR TABLA Y SELECT
-    async function cargarJuegos() {
-      const res = await fetch(`${API_URL}/api/juegos`);
-      juegosData = await res.json();
+    // Navegación simple entre pantallas para probar la interfaz
+    function unirseASala() {
+      const codigo = document.getElementById('txt-codigo').value;
+      if (!codigo) return alert('Ingresa un código válido');
       
-      const tbody = document.getElementById('tabla-juegos');
-      const select = document.getElementById('rol-juego-id');
+      document.getElementById('lbl-codigo').innerText = codigo.toUpperCase();
+      document.getElementById('screen-menu').classList.remove('active');
+      document.getElementById('screen-game').classList.add('active');
       
-      tbody.innerHTML = '';
-      select.innerHTML = '<option value="">Selecciona un Juego...</option>';
-
-      juegosData.forEach(j => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${j.id}</td>
-            <td><b>${j.titulo}</b></td>
-            <td class="actions-cell">
-              <button class="btn-warning" onclick="prepararEditarJuego(${j.id})">Editar</button>
-              <button class="btn-danger" onclick="eliminarJuego(${j.id})">Desactivar</button>
-            </td>
-          </tr>
-        `;
-        select.innerHTML += `<option value="${j.id}">${j.titulo}</option>`;
-      });
+      logAccion("Te has unido a la sala: " + codigo);
+      iniciarCanvasDemo();
     }
 
-    // PREPARAR FORMULARIO PARA EDITAR JUEGO
-    function prepararEditarJuego(id) {
-      const juego = juegosData.find(j => j.id === id);
-      if (!juego) return;
-
-      document.getElementById('juego-id').value = juego.id;
-      document.getElementById('juego-titulo').value = juego.titulo;
-      document.getElementById('juego-desc').value = juego.descripcion || '';
-      document.getElementById('juego-tiempo').value = juego.tiempo_limite_minutos;
-      document.getElementById('juego-min').value = juego.min_jugadores;
-      document.getElementById('juego-max').value = juego.max_jugadores;
-
-      document.getElementById('form-juego-title').innerText = 'Editar Juego #' + juego.id;
-      document.getElementById('btn-guardar-juego').innerText = 'Actualizar Juego';
-      document.getElementById('btn-cancelar-juego').style.display = 'block';
+    function crearSala() {
+      const codigoRandom = Math.random().toString(36).substring(2, 8).toUpperCase();
+      document.getElementById('txt-codigo').value = codigoRandom;
+      unirseASala();
     }
 
-    function resetFormJuego() {
-      document.getElementById('form-juego').reset();
-      document.getElementById('juego-id').value = '';
-      document.getElementById('form-juego-title').innerText = 'Agregar Juego';
-      document.getElementById('btn-guardar-juego').innerText = 'Guardar Juego';
-      document.getElementById('btn-cancelar-juego').style.display = 'none';
+    function logAccion(mensaje) {
+      const box = document.getElementById('log-box');
+      box.innerHTML += `<br>> ${mensaje}`;
+      box.scrollTop = box.scrollHeight;
     }
 
-    // CARGAR ROLES Y LLENAR TABLA
-    async function cargarRoles() {
-      const res = await fetch(`${API_URL}/api/roles-juego`);
-      rolesData = await res.json();
-      
-      const tbody = document.getElementById('tabla-roles');
-      tbody.innerHTML = '';
+    // Dibujo preliminar en Canvas de estilo 16 bits
+    function iniciarCanvasDemo() {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
 
-      rolesData.forEach(r => {
-        tbody.innerHTML += `
-          <tr>
-            <td><b>${r.nombre_rol}</b></td>
-            <td>${r.nombre_juego}</td>
-            <td class="actions-cell">
-              <button class="btn-warning" onclick="prepararEditarRol(${r.id})">Editar</button>
-              <button class="btn-danger" onclick="eliminarRol(${r.id})">Borrar</button>
-            </td>
-          </tr>
-        `;
-      });
+      // Fondo de habitación en pixel art
+      ctx.fillStyle = '#2f3542';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Dibujar piso
+      ctx.fillStyle = '#57606f';
+      ctx.fillRect(0, 300, canvas.width, 80);
+
+      // Puerta
+      ctx.fillStyle = '#834c32';
+      ctx.fillRect(360, 180, 80, 120);
+      ctx.fillStyle = '#eccc68';
+      ctx.fillRect(420, 240, 8, 8); // Pomo pixelado
+
+      // Pista/Mensaje en pantalla
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '10px "Press Start 2P"';
+      ctx.fillText("Interactúa con la puerta o busca pistas...", 180, 50);
     }
-
-    // PREPARAR FORMULARIO PARA EDITAR ROL
-    function prepararEditarRol(id) {
-      const rol = rolesData.find(r => r.id === id);
-      if (!rol) return;
-
-      document.getElementById('rol-id').value = rol.id;
-      document.getElementById('rol-juego-id').value = rol.juego_id;
-      document.getElementById('rol-nombre').value = rol.nombre_rol;
-      document.getElementById('rol-desc').value = rol.descripcion || '';
-
-      document.getElementById('form-rol-title').innerText = 'Editar Rol #' + rol.id;
-      document.getElementById('btn-guardar-rol').innerText = 'Actualizar Rol';
-      document.getElementById('btn-cancelar-rol').style.display = 'block';
-    }
-
-    function resetFormRol() {
-      document.getElementById('form-rol').reset();
-      document.getElementById('rol-id').value = '';
-      document.getElementById('form-rol-title').innerText = 'Agregar Rol a Juego';
-      document.getElementById('btn-guardar-rol').innerText = 'Guardar Rol';
-      document.getElementById('btn-cancelar-rol').style.display = 'none';
-    }
-
-    // GUARDAR O ACTUALIZAR JUEGO (POST / PUT)
-    document.getElementById('form-juego').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const id = document.getElementById('juego-id').value;
-      const data = {
-        titulo: document.getElementById('juego-titulo').value,
-        descripcion: document.getElementById('juego-desc').value,
-        tiempo_limite_minutos: document.getElementById('juego-tiempo').value,
-        min_jugadores: document.getElementById('juego-min').value,
-        max_jugadores: document.getElementById('juego-max').value
-      };
-
-      if (id) {
-        await fetch(`${API_URL}/api/juegos/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-      } else {
-        await fetch(`${API_URL}/api/juegos`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-      }
-
-      resetFormJuego();
-      cargarJuegos();
-    });
-
-    // GUARDAR O ACTUALIZAR ROL (POST / PUT)
-    document.getElementById('form-rol').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const id = document.getElementById('rol-id').value;
-      const data = {
-        juego_id: document.getElementById('rol-juego-id').value,
-        nombre_rol: document.getElementById('rol-nombre').value,
-        descripcion: document.getElementById('rol-desc').value
-      };
-
-      if (id) {
-        await fetch(`${API_URL}/api/roles-juego/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-      } else {
-        await fetch(`${API_URL}/api/roles-juego`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-      }
-
-      resetFormRol();
-      cargarRoles();
-    });
-
-    // ELIMINAR JUEGO
-    async function eliminarJuego(id) {
-      if(confirm('¿Desactivar este juego?')) {
-        await fetch(`${API_URL}/api/juegos/${id}`, { method: 'DELETE' });
-        cargarJuegos();
-      }
-    }
-
-    // ELIMINAR ROL
-    async function eliminarRol(id) {
-      if(confirm('¿Eliminar este rol?')) {
-        await fetch(`${API_URL}/api/roles-juego/${id}`, { method: 'DELETE' });
-        cargarRoles();
-      }
-    }
-
-    // INICIALIZAR
-    cargarJuegos();
-    cargarRoles();
   </script>
 </body>
 </html>
