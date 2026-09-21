@@ -3,270 +3,260 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Escape Room - 16 Bit Edition</title>
-  <!-- Fuente Retro 16-bits -->
+  <title>Escape Room 16-Bit Multiplayer</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Press Start 2P', cursive;
-      image-rendering: pixelated; /* Mantiene bordes nítidos de 16-bit */
-    }
-
-    body {
-      background-color: #0d0d15;
-      color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      overflow: hidden;
-    }
-
-    /* Contenedor Principal con marco retro */
-    #game-container {
-      width: 960px;
-      height: 600px;
-      background-color: #1a1a24;
-      border: 6px solid #4a4a68;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 10px #000;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Encabezado HUD */
-    header {
-      background-color: #2b2b3a;
-      padding: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 4px solid #4a4a68;
-      font-size: 12px;
-    }
-
-    .timer {
-      color: #ff4757;
-      text-shadow: 2px 2px #000;
-    }
-
-    .room-code {
-      color: #2ed573;
-    }
-
-    /* Área del Escenario / Canvas */
-    #main-stage {
-      flex: 1;
-      position: relative;
-      background: #111118;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    /* Secciones intercambiables */
-    .screen {
-      display: none;
-      width: 100%;
-      height: 100%;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      text-align: center;
-    }
-
-    .screen.active {
-      display: flex;
-    }
-
-    /* Botones Retro */
-    .btn-pixel {
-      background-color: #ff6b81;
-      color: #fff;
-      border: none;
-      padding: 12px 20px;
-      margin: 10px;
-      font-size: 12px;
-      cursor: pointer;
-      box-shadow: 0 5px 0 #b33939;
-      transition: all 0.1s;
-    }
-
-    .btn-pixel:active {
-      transform: translateY(5px);
-      box-shadow: 0 0 0 #b33939;
-    }
-
-    .btn-pixel.green {
-      background-color: #2ed573;
-      box-shadow: 0 5px 0 #20bf6b;
-    }
-
-    /* Inputs Pixelated */
-    input[type="text"] {
-      background: #000;
-      border: 3px solid #4a4a68;
-      color: #2ed573;
-      padding: 10px;
-      font-size: 14px;
-      text-align: center;
-      margin: 10px;
-      outline: none;
-    }
-
-    /* HUD Inferior: Inventario e Historial */
-    footer {
-      height: 120px;
-      background-color: #2b2b3a;
-      border-top: 4px solid #4a4a68;
-      display: flex;
-      padding: 10px;
-      gap: 10px;
-    }
-
-    .inventory-panel {
-      flex: 1;
-      border: 2px dashed #4a4a68;
-      padding: 8px;
-    }
-
-    .inventory-title {
-      font-size: 10px;
-      color: #eccc68;
-      margin-bottom: 8px;
-    }
-
-    .inventory-slots {
-      display: flex;
-      gap: 10px;
-    }
-
-    .slot {
-      width: 40px;
-      height: 40px;
-      background-color: #1a1a24;
-      border: 2px solid #57606f;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-    }
-
-    .log-panel {
-      flex: 1;
-      border: 2px solid #4a4a68;
-      background: #000;
-      padding: 8px;
-      font-size: 8px;
-      line-height: 1.4;
-      overflow-y: auto;
-      color: #ffa502;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Press Start 2P', cursive; image-rendering: pixelated; }
+    body { background: #0d0d15; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    #game-container { width: 960px; height: 620px; background: #1a1a24; border: 6px solid #4a4a68; display: flex; flex-direction: column; position: relative; }
+    header { background: #2b2b3a; padding: 12px; display: flex; justify-content: space-between; border-bottom: 4px solid #4a4a68; font-size: 10px; }
+    .screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+    .screen.active { display: flex; }
+    .btn-pixel { background: #ff6b81; color: #fff; border: none; padding: 10px 16px; margin: 8px; font-size: 10px; cursor: pointer; box-shadow: 0 4px 0 #b33939; }
+    .btn-pixel.green { background: #2ed573; box-shadow: 0 4px 0 #20bf6b; }
+    input, select { background: #000; border: 2px solid #4a4a68; color: #2ed573; padding: 8px; font-size: 10px; margin: 6px; outline: none; text-align: center; }
+    footer { height: 100px; background: #2b2b3a; border-top: 4px solid #4a4a68; display: flex; padding: 8px; gap: 8px; }
+    .log-panel { flex: 1; background: #000; border: 2px solid #4a4a68; padding: 6px; font-size: 8px; color: #ffa502; overflow-y: auto; }
+    ul { list-style: none; margin: 10px 0; font-size: 10px; color: #70a1ff; }
   </style>
 </head>
 <body>
 
-  <div id="game-container">
-    <!-- Barra Superior / HUD -->
-    <header>
-      <div>SALA: <span id="lbl-codigo" class="room-code">------</span></div>
-      <div class="timer">TIEMPO: <span id="lbl-tiempo">60:00</span></div>
-      <div>ROL: <span id="lbl-rol" style="color:#70a1ff;">NINGUNO</span></div>
-    </header>
+<div id="game-container">
+  <header>
+    <div>USUARIO: <span id="lbl-user" style="color:#eccc68;">-</span></div>
+    <div>SALA: <span id="lbl-codigo" style="color:#2ed573;">------</span></div>
+    <div>ROL: <span id="lbl-rol" style="color:#70a1ff;">NINGUNO</span></div>
+  </header>
 
-    <!-- Área Principal de Pantallas -->
-    <div id="main-stage">
-      
-      <!-- Pantalla 1: Menú Inicial -->
-      <div id="screen-menu" class="screen active">
-        <h1 style="color: #ff4757; font-size: 20px; margin-bottom: 20px;">ESCAPE ROOM 16-BIT</h1>
-        <input type="text" id="txt-codigo" placeholder="CÓDIGO DE SALA" maxlength="10">
-        <div>
-          <button class="btn-pixel green" onclick="unirseASala()">UNIRSE A SALA</button>
-          <button class="btn-pixel" onclick="crearSala()">CREAR SALA</button>
-        </div>
-      </div>
-
-      <!-- Pantalla 2: Sala de Juego (Canvas 16-bit) -->
-      <div id="screen-game" class="screen">
-        <canvas id="gameCanvas" width="800" height="380" style="background: #000; border: 2px solid #fff;"></canvas>
-      </div>
-
+  <div id="main-stage" style="flex:1; position:relative;">
+    
+    <!-- PANTALLA 1: LOGIN / REGISTRO -->
+    <div id="screen-auth" class="screen active">
+      <h2 style="color:#ff4757; font-size:16px; margin-bottom:15px;">INICIAR SESIÓN</h2>
+      <input type="text" id="auth-username" placeholder="Tu Nombre de Usuario">
+      <button class="btn-pixel green" onclick="iniciarSesion()">ENTRAR</button>
+      <button class="btn-pixel" onclick="registrarUsuario()">REGISTRARSE</button>
     </div>
 
-    <!-- Barra Inferior / Inventario y Logs -->
-    <footer>
-      <div class="inventory-panel">
-        <div class="inventory-title">INVENTARIO</div>
-        <div class="inventory-slots">
-          <div class="slot" id="slot-1"></div>
-          <div class="slot" id="slot-2"></div>
-          <div class="slot" id="slot-3"></div>
-          <div class="slot" id="slot-4"></div>
-        </div>
+    <!-- PANTALLA 2: SELECCIÓN DE JUEGO / SALAS -->
+    <div id="screen-lobby-select" class="screen">
+      <h3>SELECCIONA UN JUEGO</h3>
+      <select id="select-juegos"></select>
+      <div>
+        <button class="btn-pixel green" onclick="crearSalaLobby()">CREAR NUEVA SALA</button>
       </div>
-      <div class="log-panel" id="log-box">
-        > Sistema iniciado...<br>
-        > Esperando conexión a sala...
-      </div>
-    </footer>
+      <hr style="width:50%; margin:15px 0; border-color:#4a4a68;">
+      <input type="text" id="join-codigo" placeholder="CÓDIGO DE SALA" maxlength="6">
+      <select id="select-roles"></select>
+      <button class="btn-pixel" onclick="unirseASalaLobby()">UNIRSE A SALA</button>
+    </div>
+
+    <!-- PANTALLA 3: SALA DE ESPERA (ESPERANDO JUGADORES) -->
+    <div id="screen-waiting-room" class="screen">
+      <h3 style="color:#eccc68;">SALA DE ESPERA</h3>
+      <p style="font-size:10px; margin:10px 0;">Comparte el código: <span id="wait-codigo" style="color:#2ed573; font-size:14px;"></span></p>
+      <p style="font-size:8px; color:#ff6b81;" id="wait-min-msg">Esperando jugadores mínimos...</p>
+      <h4>JUGADORES CONECTADOS:</h4>
+      <ul id="lista-jugadores"></ul>
+      <button id="btn-iniciar-juego" class="btn-pixel green" onclick="solicitarInicioJuego()">¡INICIAR JUEGO!</button>
+    </div>
+
+    <!-- PANTALLA 4: CANVAS DE JUEGO (MUÑEQUITO 16-BIT) -->
+    <div id="screen-game" class="screen">
+      <canvas id="gameCanvas" width="800" height="360" style="background:#000; border:2px solid #fff;"></canvas>
+    </div>
+
   </div>
 
-  <script>
-    // Navegación simple entre pantallas para probar la interfaz
-    function unirseASala() {
-      const codigo = document.getElementById('txt-codigo').value;
-      if (!codigo) return alert('Ingresa un código válido');
+  <footer>
+    <div class="log-panel" id="log-box">> Conectado al sistema de Escape Room...</div>
+  </footer>
+</div>
+
+<script>
+  let usuarioActual = null;
+  let salaActual = null;
+  let rolActual = null;
+  let loopInterval = null;
+
+  // Variables del Personaje (Muñequito)
+  const player = { x: 100, y: 260, size: 24, speed: 4, color: '#ff4757' };
+  const keys = {};
+
+  // Escuchar Teclado
+  window.addEventListener('keydown', e => keys[e.key] = true);
+  window.addEventListener('keyup', e => keys[e.key] = false);
+
+  function log(msg) {
+    const box = document.getElementById('log-box');
+    box.innerHTML += `<br>> ${msg}`;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function cambiarPantalla(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // --- 1. AUTENTICACIÓN ---
+  async function iniciarSesion() {
+    const username = document.getElementById('auth-username').value;
+    if(!username) return alert('Ingresa un usuario');
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ username })
+    });
+    const data = await res.json();
+    if(res.ok) {
+      usuarioActual = data.usuario;
+      document.getElementById('lbl-user').innerText = usuarioActual.username;
+      log(`Sesión iniciada como: ${usuarioActual.username}`);
+      cargarJuegosYRoles();
+      cambiarPantalla('screen-lobby-select');
+    } else { alert(data.error); }
+  }
+
+  async function registrarUsuario() {
+    const username = document.getElementById('auth-username').value;
+    if(!username) return alert('Ingresa un usuario');
+    const res = await fetch('/api/auth/registro', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ username, email: `${username}@escaperoom.com` })
+    });
+    const data = await res.json();
+    if(res.ok) { alert('Usuario creado, ahora haz clic en ENTRAR'); }
+    else { alert(data.error); }
+  }
+
+  // --- 2. JUEGOS Y SALAS DE ESPERA ---
+  async function cargarJuegosYRoles() {
+    const resJuegos = await fetch('/api/juegos');
+    const juegos = await resJuegos.json();
+    const selectJuegos = document.getElementById('select-juegos');
+    selectJuegos.innerHTML = juegos.map(j => `<option value="${j.id}">${j.titulo} (Min: ${j.min_jugadores} - Max: ${j.max_jugadores})</option>`).join('');
+
+    const resRoles = await fetch('/api/roles-juego');
+    const roles = await resRoles.json();
+    const selectRoles = document.getElementById('select-roles');
+    selectRoles.innerHTML = roles.map(r => `<option value="${r.id}">${r.nombre_rol} (${r.nombre_juego})</option>`).join('');
+  }
+
+  async function crearSalaLobby() {
+    const juego_id = document.getElementById('select-juegos').value;
+    const res = await fetch('/api/salas/crear', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ juego_id, anfitrion_id: usuarioActual.id })
+    });
+    const data = await res.json();
+    if(res.ok) {
+      document.getElementById('join-codigo').value = data.codigo_acceso;
+      log(`Sala creada con código: ${data.codigo_acceso}. Ahora elige tu rol y únete.`);
+    }
+  }
+
+  async function unirseASalaLobby() {
+    const codigo_acceso = document.getElementById('join-codigo').value;
+    const rol_juego_id = document.getElementById('select-roles').value;
+    const res = await fetch('/api/salas/unirse', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ codigo_acceso, usuario_id: usuarioActual.id, rol_juego_id })
+    });
+    const data = await res.json();
+    if(res.ok) {
+      salaActual = data.sala;
+      document.getElementById('lbl-codigo').innerText = salaActual.codigo_acceso;
+      document.getElementById('wait-codigo').innerText = salaActual.codigo_acceso;
+      cambiarPantalla('screen-waiting-room');
+      iniciarSondeoJugadores(data.min_jugadores);
+    } else { alert(data.error); }
+  }
+
+  // --- 3. MONITOREO DE ESPERA ---
+  function iniciarSondeoJugadores(minJugadores) {
+    loopInterval = setInterval(async () => {
+      const res = await fetch(`/api/salas/${salaActual.id}/jugadores`);
+      const jugadores = await res.json();
       
-      document.getElementById('lbl-codigo').innerText = codigo.toUpperCase();
-      document.getElementById('screen-menu').classList.remove('active');
-      document.getElementById('screen-game').classList.add('active');
-      
-      logAccion("Te has unido a la sala: " + codigo);
-      iniciarCanvasDemo();
-    }
+      const lista = document.getElementById('lista-jugadores');
+      lista.innerHTML = jugadores.map(j => `<li>👾 ${j.username} - Rol: ${j.nombre_rol}</li>`).join('');
 
-    function crearSala() {
-      const codigoRandom = Math.random().toString(36).substring(2, 8).toUpperCase();
-      document.getElementById('txt-codigo').value = codigoRandom;
-      unirseASala();
-    }
+      const msgMin = document.getElementById('wait-min-msg');
+      if(jugadores.length >= minJugadores) {
+        msgMin.innerText = "¡Mínimo de jugadores alcanzado! Listos para iniciar.";
+        msgMin.style.color = "#2ed573";
+      } else {
+        msgMin.innerText = `Faltan jugadores. Mínimo requerido: ${minJugadores} (Conectados: ${jugadores.length})`;
+        msgMin.style.color = "#ff6b81";
+      }
+    }, 2000);
+  }
 
-    function logAccion(mensaje) {
-      const box = document.getElementById('log-box');
-      box.innerHTML += `<br>> ${mensaje}`;
-      box.scrollTop = box.scrollHeight;
-    }
+  async function solicitarInicioJuego() {
+    const res = await fetch(`/api/salas/${salaActual.id}/iniciar`, { method: 'PUT' });
+    const data = await res.json();
+    if(res.ok) {
+      clearInterval(loopInterval);
+      cambiarPantalla('screen-game');
+      log("¡Juego Iniciado! Usa A, D o Flechas para mover tu personaje.");
+      iniciarJuegoCanvas();
+    } else { alert(data.error); }
+  }
 
-    // Dibujo preliminar en Canvas de estilo 16 bits
-    function iniciarCanvasDemo() {
-      const canvas = document.getElementById('gameCanvas');
-      const ctx = canvas.getContext('2d');
+  // --- 4. GAMEPLAY CON MUÑEQUITO 16-BIT ---
+  function iniciarJuegoCanvas() {
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
 
-      // Fondo de habitación en pixel art
+    function gameLoop() {
+      // Controles
+      if (keys['ArrowLeft'] || keys['a']) player.x -= player.speed;
+      if (keys['ArrowRight'] || keys['d']) player.x += player.speed;
+
+      // Limites de pantalla
+      if (player.x < 0) player.x = 0;
+      if (player.x > canvas.width - player.size) player.x = canvas.width - player.size;
+
+      // Limpiar Canvas
       ctx.fillStyle = '#2f3542';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Dibujar piso
+      // Piso
       ctx.fillStyle = '#57606f';
-      ctx.fillRect(0, 300, canvas.width, 80);
+      ctx.fillRect(0, 280, canvas.width, 80);
 
-      // Puerta
+      // Puerta Interactiva
       ctx.fillStyle = '#834c32';
-      ctx.fillRect(360, 180, 80, 120);
-      ctx.fillStyle = '#eccc68';
-      ctx.fillRect(420, 240, 8, 8); // Pomo pixelado
+      ctx.fillRect(600, 160, 70, 120);
 
-      // Pista/Mensaje en pantalla
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px "Press Start 2P"';
-      ctx.fillText("Interactúa con la puerta o busca pistas...", 180, 50);
+      // Detectar Proximidad a la Puerta
+      if (Math.abs(player.x - 600) < 40) {
+        ctx.fillStyle = '#eccc68';
+        ctx.font = '8px "Press Start 2P"';
+        ctx.fillText("Presiona 'E' para examinar la puerta", 520, 140);
+        
+        if (keys['e'] || keys['E']) {
+          log("Has interactuado con la puerta. Consultando acertijos...");
+          keys['e'] = false; // evitar repetición
+        }
+      }
+
+      // Dibujar Personaje 16-bit (Muñequito Pixel)
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.size, player.size);
+      // Ojos del muñeco
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(player.x + 14, player.y + 4, 4, 4);
+
+      requestAnimationFrame(gameLoop);
     }
-  </script>
+
+    requestAnimationFrame(gameLoop);
+  }
+</script>
 </body>
 </html>

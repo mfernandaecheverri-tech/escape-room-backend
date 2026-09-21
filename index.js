@@ -17,6 +17,29 @@ app.get('/', (req, res) => {
 });
 
 // ==========================================
+// 0. AUTENTICACIÓN (LOGIN Y REGISTRO)
+// ==========================================
+app.post('/api/auth/registro', async (req, res) => {
+  const { username, email, proveedor_auth_id, proveedor_uid } = req.body;
+  try {
+    const [result] = await db.query(
+      'INSERT INTO usuarios (username, email, proveedor_auth_id, proveedor_uid) VALUES (?, ?, ?, ?)',
+      [username, email || `${username}@escaperoom.com`, proveedor_auth_id || 1, proveedor_uid || username]
+    );
+    res.status(201).json({ mensaje: 'Usuario registrado', id: result.insertId, username });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { username } = req.body;
+  try {
+    const [rows] = await db.query('SELECT * FROM usuarios WHERE username = ?', [username]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json({ mensaje: 'Login exitoso', usuario: rows[0] });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// ==========================================
 // 1. JUEGOS
 // ==========================================
 app.get('/api/juegos', async (req, res) => {
@@ -195,7 +218,7 @@ app.delete('/api/acertijos/:id', async (req, res) => {
 });
 
 // ==========================================
-// 5. SALAS
+// 5. SALAS Y LOBBY DE ESPERA MULTI-JUGADOR
 // ==========================================
 app.get('/api/salas', async (req, res) => {
   try {
@@ -209,14 +232,76 @@ app.get('/api/salas', async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.post('/api/salas', async (req, res) => {
-  const { codigo_acceso, juego_id, anfitrion_id, estado } = req.body;
+// Crear nueva sala en estado EN_ESPERA
+app.post('/api/salas/crear', async (req, res) => {
+  const { juego_id, anfitrion_id } = req.body;
+  const codigo_acceso = Math.random().toString(36).substring(2, 8).toUpperCase();
   try {
     const [result] = await db.query(
-      'INSERT INTO salas (codigo_acceso, juego_id, anfitrion_id, estado) VALUES (?, ?, ?, ?)',
-      [codigo_acceso, juego_id, anfitrion_id, estado || 'EN_ESPERA']
+      'INSERT INTO salas (codigo_acceso, juego_id, anfitrion_id, estado) VALUES (?, ?, ?, "EN_ESPERA")',
+      [codigo_acceso, juego_id, anfitrion_id]
     );
-    res.status(201).json({ mensaje: 'Sala creada', id: result.insertId });
+    res.status(201).json({ mensaje: 'Sala creada', sala_id: result.insertId, codigo_acceso });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// Unirse a una sala respetando límite máximo
+app.post('/api/salas/unirse', async (req, res) => {
+  const { codigo_acceso, usuario_id, rol_juego_id } = req.body;
+  try {
+    const [salas] = await db.query('SELECT * FROM salas WHERE codigo_acceso = ?', [codigo_acceso]);
+    if (salas.length === 0) return res.status(404).json({ error: 'La sala no existe' });
+    const sala = salas[0];
+
+    if (sala.estado !== 'EN_ESPERA') return res.status(400).json({ error: 'La sala ya está en juego o finalizada' });
+
+    const [juego] = await db.query('SELECT * FROM juegos WHERE id = ?', [sala.juego_id]);
+    const [jugadores] = await db.query('SELECT * FROM jugadores_sala WHERE sala_id = ?', [sala.id]);
+
+    if (jugadores.length >= juego[0].max_jugadores) {
+      return res.status(400).json({ error: 'La sala alcanzó el límite máximo de jugadores' });
+    }
+
+    await db.query(
+      'INSERT INTO jugadores_sala (sala_id, usuario_id, rol_juego_id, esta_listo) VALUES (?, ?, ?, FALSE)',
+      [sala.id, usuario_id, rol_juego_id]
+    );
+
+    res.json({ mensaje: 'Unido a la sala con éxito', sala, min_jugadores: juego[0].min_jugadores });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// Consultar jugadores conectados en la sala
+app.get('/api/salas/:id/jugadores', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await db.query(`
+      SELECT js.*, u.username, r.nombre_rol 
+      FROM jugadores_sala js
+      JOIN usuarios u ON js.usuario_id = u.id
+      JOIN roles_juego r ON js.rol_juego_id = r.id
+      WHERE js.sala_id = ?
+    `, [id]);
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// Iniciar juego verificando el número mínimo de jugadores
+app.put('/api/salas/:id/iniciar', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [sala] = await db.query('SELECT * FROM salas WHERE id = ?', [id]);
+    const [juego] = await db.query('SELECT * FROM juegos WHERE id = ?', [sala[0].juego_id]);
+    const [jugadores] = await db.query('SELECT * FROM jugadores_sala WHERE sala_id = ?', [id]);
+
+    if (jugadores.length < juego[0].min_jugadores) {
+      return res.status(400).json({ 
+        error: `Se necesitan mínimo ${juego[0].min_jugadores} jugadores para iniciar. Actuales: ${jugadores.length}` 
+      });
+    }
+
+    await db.query('UPDATE salas SET estado = "EN_PROGRESO", fecha_inicio = NOW() WHERE id = ?', [id]);
+    res.json({ mensaje: '¡El juego ha comenzado!' });
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
@@ -229,7 +314,7 @@ app.delete('/api/salas/:id', async (req, res) => {
 });
 
 // ==========================================
-// 6. HISTORIAL DE ACCIONES (Lógica de Logs)
+// 6. HISTORIAL DE ACCIONES (LOGS DE ACCIONES)
 // ==========================================
 app.get('/api/historial/:sala_id', async (req, res) => {
   const { sala_id } = req.params;
@@ -253,6 +338,7 @@ app.post('/api/historial', async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
+// Servidor escuchando
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
