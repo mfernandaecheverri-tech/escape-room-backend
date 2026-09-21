@@ -14,10 +14,11 @@
     .screen.active { display: flex; }
     .btn-pixel { background: #ff6b81; color: #fff; border: none; padding: 10px 16px; margin: 8px; font-size: 10px; cursor: pointer; box-shadow: 0 4px 0 #b33939; }
     .btn-pixel.green { background: #2ed573; box-shadow: 0 4px 0 #20bf6b; }
-    input, select { background: #000; border: 2px solid #4a4a68; color: #2ed573; padding: 8px; font-size: 10px; margin: 6px; outline: none; text-align: center; }
-    footer { height: 100px; background: #2b2b3a; border-top: 4px solid #4a4a68; display: flex; padding: 8px; gap: 8px; }
-    .log-panel { flex: 1; background: #000; border: 2px solid #4a4a68; padding: 6px; font-size: 8px; color: #ffa502; overflow-y: auto; }
-    ul { list-style: none; margin: 10px 0; font-size: 10px; color: #70a1ff; }
+    input, select { background: #000; border: 2px solid #4a4a68; color: #2ed573; padding: 10px; font-size: 10px; margin: 8px; outline: none; text-align: center; width: 320px; }
+    footer { height: 120px; background: #2b2b3a; border-top: 4px solid #4a4a68; display: flex; padding: 8px; gap: 8px; }
+    .log-panel { flex: 2; background: #000; border: 2px solid #4a4a68; padding: 6px; font-size: 8px; color: #ffa502; overflow-y: auto; }
+    .inv-panel { flex: 1; background: #000; border: 2px solid #4a4a68; padding: 6px; font-size: 8px; color: #70a1ff; }
+    .inv-slot { display: inline-block; width: 40px; height: 40px; border: 2px dashed #4a4a68; margin: 4px; vertical-align: top; text-align: center; line-height: 36px; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -31,46 +32,56 @@
 
   <div id="main-stage" style="flex:1; position:relative;">
     
-    <!-- PANTALLA 1: LOGIN / REGISTRO -->
+    <!-- PANTALLA 1: LOGIN -->
     <div id="screen-auth" class="screen active">
       <h2 style="color:#ff4757; font-size:16px; margin-bottom:15px;">INICIAR SESIÓN</h2>
-      <input type="text" id="auth-username" placeholder="Tu Nombre de Usuario">
-      <button class="btn-pixel green" onclick="iniciarSesion()">ENTRAR</button>
-      <button class="btn-pixel" onclick="registrarUsuario()">REGISTRARSE</button>
+      <input type="text" id="auth-username" placeholder="Tu Usuario (Ej: carlos_pro)" value="carlos_pro">
+      <div>
+        <button class="btn-pixel green" onclick="iniciarSesion()">ENTRAR</button>
+        <button class="btn-pixel" onclick="registrarUsuario()">REGISTRARSE</button>
+      </div>
     </div>
 
-    <!-- PANTALLA 2: SELECCIÓN DE JUEGO / SALAS -->
+    <!-- PANTALLA 2: LOBBY & DESPLEGABLE DE JUEGOS -->
     <div id="screen-lobby-select" class="screen">
-      <h3>SELECCIONA UN JUEGO</h3>
-      <select id="select-juegos"></select>
+      <h3 style="margin-bottom:10px;">SELECCIONA UN JUEGO</h3>
+      <select id="select-juegos"><option value="">Cargando juegos de BD...</option></select>
       <div>
         <button class="btn-pixel green" onclick="crearSalaLobby()">CREAR NUEVA SALA</button>
       </div>
       <hr style="width:50%; margin:15px 0; border-color:#4a4a68;">
-      <input type="text" id="join-codigo" placeholder="CÓDIGO DE SALA" maxlength="6">
-      <select id="select-roles"></select>
-      <button class="btn-pixel" onclick="unirseASalaLobby()">UNIRSE A SALA</button>
+      <input type="text" id="join-codigo" placeholder="CÓDIGO DE SALA" maxlength="10">
+      <div>
+        <button class="btn-pixel" onclick="unirseASalaLobby()">UNIRSE A SALA</button>
+      </div>
     </div>
 
-    <!-- PANTALLA 3: SALA DE ESPERA (ESPERANDO JUGADORES) -->
+    <!-- PANTALLA 3: SALA DE ESPERA -->
     <div id="screen-waiting-room" class="screen">
       <h3 style="color:#eccc68;">SALA DE ESPERA</h3>
-      <p style="font-size:10px; margin:10px 0;">Comparte el código: <span id="wait-codigo" style="color:#2ed573; font-size:14px;"></span></p>
-      <p style="font-size:8px; color:#ff6b81;" id="wait-min-msg">Esperando jugadores mínimos...</p>
-      <h4>JUGADORES CONECTADOS:</h4>
-      <ul id="lista-jugadores"></ul>
+      <p style="font-size:10px; margin:10px 0;">Código: <span id="wait-codigo" style="color:#2ed573; font-size:14px;"></span></p>
+      <p style="font-size:8px; color:#ff6b81;" id="wait-min-msg">Esperando jugadores...</p>
+      <h4>JUGADORES EN SALA:</h4>
+      <ul id="lista-jugadores" style="list-style:none; margin:10px 0; font-size:10px; color:#70a1ff;"></ul>
       <button id="btn-iniciar-juego" class="btn-pixel green" onclick="solicitarInicioJuego()">¡INICIAR JUEGO!</button>
     </div>
 
-    <!-- PANTALLA 4: CANVAS DE JUEGO (MUÑEQUITO 16-BIT) -->
-    <div id="screen-game" class="screen">
-      <canvas id="gameCanvas" width="800" height="360" style="background:#000; border:2px solid #fff;"></canvas>
+    <!-- PANTALLA 4: GAMEPLAY CANVAS -->
+    <div id="screen-game" class="screen" style="padding:0;">
+      <canvas id="gameCanvas" width="948" height="380" style="background:#000;"></canvas>
     </div>
 
   </div>
 
   <footer>
     <div class="log-panel" id="log-box">> Conectado al sistema de Escape Room...</div>
+    <div class="inv-panel">
+      <div>INVENTARIO:</div>
+      <div id="inventory-slots" style="margin-top:5px;">
+        <div class="inv-slot" id="slot-1">-</div>
+        <div class="inv-slot" id="slot-2">-</div>
+      </div>
+    </div>
   </footer>
 </div>
 
@@ -80,11 +91,9 @@
   let rolActual = null;
   let loopInterval = null;
 
-  // Variables del Personaje (Muñequito)
-  const player = { x: 100, y: 260, size: 24, speed: 4, color: '#ff4757' };
+  const player = { x: 80, y: 270, size: 28, speed: 5, color: '#ff4757' };
   const keys = {};
 
-  // Escuchar Teclado
   window.addEventListener('keydown', e => keys[e.key] = true);
   window.addEventListener('keyup', e => keys[e.key] = false);
 
@@ -99,178 +108,243 @@
     document.getElementById(id).classList.add('active');
   }
 
-  // --- 1. AUTENTICACIÓN MEJORADA ---
-async function iniciarSesion() {
-  const username = document.getElementById('auth-username').value;
-  if(!username) return alert('Ingresa un usuario');
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ username })
-    });
-    const data = await res.json();
-    if(res.ok) {
-      // Guardamos la información completa del usuario
-      usuarioActual = data.usuario;
-      document.getElementById('lbl-user').innerText = usuarioActual.username;
-      log(`Sesión iniciada como: ${usuarioActual.username} (ID: ${usuarioActual.id})`);
-      await cargarJuegos();
-      cambiarPantalla('screen-lobby-select');
-    } else { 
-      alert(data.error || 'Error al iniciar sesión'); 
-    }
-  } catch(e) { 
-    log("Error de conexión: " + e.message);
-    alert("Error al conectar con la API: " + e.message); 
-  }
-}
-
-// --- 2. CREACIÓN DE SALA MEJORADA ---
-async function crearSalaLobby() {
-  const juego_id = document.getElementById('select-juegos').value;
-  
-  if(!usuarioActual || !usuarioActual.id) {
-    alert('Error: No se detectó el ID del usuario. Por favor vuelve a iniciar sesión.');
-    return;
-  }
-
-  if(!juego_id) {
-    alert('Selecciona un juego válido de la lista');
-    return;
-  }
-
-  try {
-    const res = await fetch('/api/salas/crear', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ juego_id: parseInt(juego_id), anfitrion_id: usuarioActual.id })
-    });
-    
-    const data = await res.json();
-
-    if(res.ok) {
-      // Llenamos el input de código automáticamente
-      document.getElementById('join-codigo').value = data.codigo_acceso;
-      log(`¡Sala creada con éxito! Código: ${data.codigo_acceso}`);
+  // --- 1. CARGAR JUEGOS DESDE BD ---
+  async function cargarJuegos() {
+    try {
+      const res = await fetch('/api/juegos');
+      const juegos = await res.json();
+      const select = document.getElementById('select-juegos');
       
-      // Intentamos unirme automáticamente
-      unirseASalaLobby();
-    } else {
-      log(`Error al crear sala: ${data.error}`);
-      alert("Error del servidor: " + data.error);
+      if(!select) return;
+
+      if (!juegos || juegos.length === 0) {
+        select.innerHTML = '<option value="">No hay juegos disponibles</option>';
+        return;
+      }
+
+      select.innerHTML = juegos.map(j => 
+        `<option value="${j.id}">${j.titulo} (Min: ${j.min_jugadores} - Max: ${j.max_jugadores})</option>`
+      ).join('');
+    } catch (e) {
+      log("Error al cargar juegos: " + e.message);
     }
-  } catch(e) {
-    log("Error de red al crear sala: " + e.message);
   }
-}
 
-  // --- 2. JUEGOS Y SALAS DE ESPERA ---
-  async function cargarJuegosYRoles() {
-    const resJuegos = await fetch('/api/juegos');
-    const juegos = await resJuegos.json();
-    const selectJuegos = document.getElementById('select-juegos');
-    selectJuegos.innerHTML = juegos.map(j => `<option value="${j.id}">${j.titulo} (Min: ${j.min_jugadores} - Max: ${j.max_jugadores})</option>`).join('');
+  // --- 2. AUTENTICACIÓN ---
+  async function iniciarSesion() {
+    const username = document.getElementById('auth-username').value;
+    if(!username) return alert('Ingresa un usuario');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username })
+      });
+      const data = await res.json();
+      if(res.ok) {
+        usuarioActual = data.usuario;
+        document.getElementById('lbl-user').innerText = usuarioActual.username;
+        log(`Sesión iniciada como: ${usuarioActual.username} (ID: ${usuarioActual.id})`);
+        await cargarJuegos();
+        cambiarPantalla('screen-lobby-select');
+      } else { 
+        alert(data.error || 'Error al iniciar sesión'); 
+      }
+    } catch(e) { 
+      log("Error de conexión: " + e.message);
+      alert("Error al conectar con la API: " + e.message); 
+    }
+  }
 
-    const resRoles = await fetch('/api/roles-juego');
-    const roles = await resRoles.json();
-    const selectRoles = document.getElementById('select-roles');
-    selectRoles.innerHTML = roles.map(r => `<option value="${r.id}">${r.nombre_rol} (${r.nombre_juego})</option>`).join('');
+  async function registrarUsuario() {
+    const username = document.getElementById('auth-username').value;
+    if(!username) return alert('Ingresa un usuario');
+    try {
+      const res = await fetch('/api/auth/registro', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username })
+      });
+      if(res.ok) { alert('Usuario registrado con éxito. Haz clic en ENTRAR.'); }
+      else { const data = await res.json(); alert(data.error); }
+    } catch(e) { alert("Error al registrar: " + e.message); }
+  }
+
+  // --- 3. CREAR Y UNIRSE A SALA ---
+  async function crearSalaLobby() {
+    const juego_id = document.getElementById('select-juegos').value;
+    
+    if(!usuarioActual || !usuarioActual.id) {
+      alert('Error: No se detectó el ID del usuario. Vuelve a iniciar sesión.');
+      return;
+    }
+
+    if(!juego_id) {
+      alert('Selecciona un juego válido de la lista');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/salas/crear', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ juego_id: parseInt(juego_id), anfitrion_id: usuarioActual.id })
+      });
+      
+      const data = await res.json();
+
+      if(res.ok) {
+        document.getElementById('join-codigo').value = data.codigo_acceso;
+        log(`¡Sala creada! Código: ${data.codigo_acceso}. Entrando...`);
+        unirseASalaLobby();
+      } else {
+        log(`Error al crear sala: ${data.error}`);
+        alert("Error del servidor: " + data.error);
+      }
+    } catch(e) {
+      log("Error de red al crear sala: " + e.message);
+    }
   }
 
   async function unirseASalaLobby() {
     const codigo_acceso = document.getElementById('join-codigo').value;
-    const rol_juego_id = document.getElementById('select-roles').value;
-    const res = await fetch('/api/salas/unirse', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ codigo_acceso, usuario_id: usuarioActual.id, rol_juego_id })
-    });
-    const data = await res.json();
-    if(res.ok) {
-      salaActual = data.sala;
-      document.getElementById('lbl-codigo').innerText = salaActual.codigo_acceso;
-      document.getElementById('wait-codigo').innerText = salaActual.codigo_acceso;
-      cambiarPantalla('screen-waiting-room');
-      iniciarSondeoJugadores(data.min_jugadores);
-    } else { alert(data.error); }
+    const juego_id = document.getElementById('select-juegos').value || 1;
+    if(!codigo_acceso) return alert('Ingresa el código de sala');
+
+    try {
+      // Obtener roles disponibles para este juego
+      const resRoles = await fetch(`/api/juegos/${juego_id}/roles`);
+      const roles = await resRoles.json();
+      const rolAzar = roles.length > 0 ? roles[Math.floor(Math.random() * roles.length)] : { id: 1, nombre_rol: 'Hacker' };
+
+      const res = await fetch('/api/salas/unirse', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ codigo_acceso, usuario_id: usuarioActual.id, rol_juego_id: rolAzar.id })
+      });
+      
+      const data = await res.json();
+      
+      if(res.ok) {
+        salaActual = data.sala;
+        rolActual = rolAzar;
+        document.getElementById('lbl-codigo').innerText = salaActual.codigo_acceso;
+        document.getElementById('lbl-rol').innerText = rolAzar.nombre_rol;
+        document.getElementById('wait-codigo').innerText = salaActual.codigo_acceso;
+        
+        cargarInventarioRol(rolAzar.nombre_rol);
+        cambiarPantalla('screen-waiting-room');
+        iniciarSondeoJugadores(data.min_jugadores);
+      } else { 
+        alert(data.error); 
+      }
+    } catch(e) {
+      log("Error al unirse a la sala: " + e.message);
+    }
   }
 
-  // --- 3. MONITOREO DE ESPERA ---
-  function iniciarSondeoJugadores(minJugadores) {
-    loopInterval = setInterval(async () => {
-      const res = await fetch(`/api/salas/${salaActual.id}/jugadores`);
-      const jugadores = await res.json();
-      
-      const lista = document.getElementById('lista-jugadores');
-      lista.innerHTML = jugadores.map(j => `<li>👾 ${j.username} - Rol: ${j.nombre_rol}</li>`).join('');
+  function cargarInventarioRol(nombreRol) {
+    if(nombreRol === 'Hacker') {
+      document.getElementById('slot-1').innerText = '💻';
+      document.getElementById('slot-2').innerText = '🔦';
+      log(`Rol asignado: Hacker. Objetos equipados: Terminal UV y Linterna.`);
+    } else {
+      document.getElementById('slot-1').innerText = '🧪';
+      document.getElementById('slot-2').innerText = '📄';
+      log(`Rol asignado: Científico. Objetos equipados: Poción y Pista.`);
+    }
+  }
 
-      const msgMin = document.getElementById('wait-min-msg');
-      if(jugadores.length >= minJugadores) {
-        msgMin.innerText = "¡Mínimo de jugadores alcanzado! Listos para iniciar.";
-        msgMin.style.color = "#2ed573";
-      } else {
-        msgMin.innerText = `Faltan jugadores. Mínimo requerido: ${minJugadores} (Conectados: ${jugadores.length})`;
-        msgMin.style.color = "#ff6b81";
-      }
+  function iniciarSondeoJugadores(minJugadores) {
+    if(loopInterval) clearInterval(loopInterval);
+    loopInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/salas/${salaActual.id}/jugadores`);
+        const jugadores = await res.json();
+        
+        const lista = document.getElementById('lista-jugadores');
+        lista.innerHTML = jugadores.map(j => `<li>👾 ${j.username} - Rol: ${j.nombre_rol || 'Asignado'}</li>`).join('');
+
+        const msgMin = document.getElementById('wait-min-msg');
+        if(jugadores.length >= minJugadores) {
+          msgMin.innerText = "¡Mínimo alcanzado! Todo listo para jugar.";
+          msgMin.style.color = "#2ed573";
+        } else {
+          msgMin.innerText = `Faltan jugadores. Mínimo: ${minJugadores} (Conectados: ${jugadores.length})`;
+          msgMin.style.color = "#ff6b81";
+        }
+      } catch(e) {}
     }, 2000);
   }
 
   async function solicitarInicioJuego() {
-    const res = await fetch(`/api/salas/${salaActual.id}/iniciar`, { method: 'PUT' });
-    const data = await res.json();
-    if(res.ok) {
-      clearInterval(loopInterval);
-      cambiarPantalla('screen-game');
-      log("¡Juego Iniciado! Usa A, D o Flechas para mover tu personaje.");
-      iniciarJuegoCanvas();
-    } else { alert(data.error); }
+    try {
+      const res = await fetch(`/api/salas/${salaActual.id}/iniciar`, { method: 'PUT' });
+      if(res.ok) {
+        clearInterval(loopInterval);
+        cambiarPantalla('screen-game');
+        log("¡SALA INICIADA! Camina hacia la puerta con A/D e interactúa con 'E'.");
+        iniciarJuegoCanvas();
+      } else { 
+        const data = await res.json(); 
+        alert(data.error); 
+      }
+    } catch(e) {
+      alert("Error al iniciar juego: " + e.message);
+    }
   }
 
-  // --- 4. GAMEPLAY CON MUÑEQUITO 16-BIT ---
+  // --- 4. GAMEPLAY EN CANVAS ---
   function iniciarJuegoCanvas() {
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
     function gameLoop() {
-      // Controles
-      if (keys['ArrowLeft'] || keys['a']) player.x -= player.speed;
-      if (keys['ArrowRight'] || keys['d']) player.x += player.speed;
+      if (keys['ArrowLeft'] || keys['a'] || keys['A']) player.x -= player.speed;
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) player.x += player.speed;
 
-      // Limites de pantalla
-      if (player.x < 0) player.x = 0;
-      if (player.x > canvas.width - player.size) player.x = canvas.width - player.size;
+      if (player.x < 10) player.x = 10;
+      if (player.x > canvas.width - 40) player.x = canvas.width - 40;
 
-      // Limpiar Canvas
-      ctx.fillStyle = '#2f3542';
+      // Fondo
+      ctx.fillStyle = '#1e272e';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Piso
-      ctx.fillStyle = '#57606f';
-      ctx.fillRect(0, 280, canvas.width, 80);
+      ctx.fillStyle = '#485460';
+      ctx.fillRect(0, 300, canvas.width, 80);
 
-      // Puerta Interactiva
-      ctx.fillStyle = '#834c32';
-      ctx.fillRect(600, 160, 70, 120);
+      // Puerta Principal
+      ctx.fillStyle = '#d2dae2';
+      ctx.fillRect(750, 160, 80, 140);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(760, 170, 60, 120);
 
-      // Detectar Proximidad a la Puerta
-      if (Math.abs(player.x - 600) < 40) {
+      // Colisión / Interacción
+      if (Math.abs(player.x - 760) < 50) {
         ctx.fillStyle = '#eccc68';
-        ctx.font = '8px "Press Start 2P"';
-        ctx.fillText("Presiona 'E' para examinar la puerta", 520, 140);
+        ctx.font = '10px "Press Start 2P"';
+        ctx.fillText("PRESIONA 'E' PARA INGRESAR CÓDIGO", 300, 140);
         
         if (keys['e'] || keys['E']) {
-          log("Has interactuado con la puerta. Consultando acertijos...");
-          keys['e'] = false; // evitar repetición
+          keys['e'] = false;
+          keys['E'] = false;
+          const codigo = prompt("Ingresa el código de acceso (Año de fundación del laboratorio):");
+          if (codigo === "1984") {
+            alert("¡CÓDIGO CORRECTO! HAS ESCAPADO DEL LABORATORIO 🎉");
+            log("🎉 ¡SALA COMPLETADA CON ÉXITO CON EL CÓDIGO 1984!");
+          } else if(codigo) {
+            alert("Código incorrecto.");
+            log("❌ Intento fallido de código.");
+          }
         }
       }
 
-      // Dibujar Personaje 16-bit (Muñequito Pixel)
+      // Jugador
       ctx.fillStyle = player.color;
       ctx.fillRect(player.x, player.y, player.size, player.size);
-      // Ojos del muñeco
       ctx.fillStyle = '#fff';
-      ctx.fillRect(player.x + 14, player.y + 4, 4, 4);
+      ctx.fillRect(player.x + 18, player.y + 6, 6, 6); // Ojo
 
       requestAnimationFrame(gameLoop);
     }
