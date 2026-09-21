@@ -22,8 +22,8 @@ app.get('/', (req, res) => {
 app.post('/api/auth/registro', async (req, res) => {
   const { username, email, proveedor_auth_id, proveedor_uid } = req.body;
   try {
-    // 1. Nos aseguramos de que exista al menos el proveedor por defecto (id: 1)
-    await db.query('INSERT IGNORE INTO proveedores_auth (id, nombre) VALUES (1, "LOCAL")');
+    // 1. Insertamos el proveedor por defecto usando comillas simples para 'LOCAL'
+    await db.query("INSERT IGNORE INTO proveedores_auth (id, nombre) VALUES (1, 'LOCAL')");
 
     // 2. Insertamos el usuario
     const [result] = await db.query(
