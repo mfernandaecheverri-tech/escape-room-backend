@@ -22,6 +22,10 @@ app.get('/', (req, res) => {
 app.post('/api/auth/registro', async (req, res) => {
   const { username, email, proveedor_auth_id, proveedor_uid } = req.body;
   try {
+    // 1. Nos aseguramos de que exista al menos el proveedor por defecto (id: 1)
+    await db.query('INSERT IGNORE INTO proveedores_auth (id, nombre) VALUES (1, "LOCAL")');
+
+    // 2. Insertamos el usuario
     const [result] = await db.query(
       'INSERT INTO usuarios (username, email, proveedor_auth_id, proveedor_uid) VALUES (?, ?, ?, ?)',
       [username, email || `${username}@escaperoom.com`, proveedor_auth_id || 1, proveedor_uid || username]
