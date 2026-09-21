@@ -327,7 +327,7 @@
         if (acertijos.length > 0) {
           etapaActual = etapa;
           acertijoActual = acertijos[0];
-          log(`Tu etapa: "${etapa.titulo_etapa}". Usa A/D para moverte y 'E' para interactuar.`);
+          log(`Tu etapa: "${etapa.titulo_etapa}". Usa flechas o WASD para moverte y 'E'/'L' para interactuar.`);
           return;
         }
       }
@@ -400,36 +400,53 @@
     const ctx = canvas.getContext('2d');
     const esHacker = rolActual.nombre_rol === 'Hacker';
 
-    const paintings = [140, 320, 500, 680].map((x, i) => ({ x, y: 40, w: 60, h: 80, id: i }));
-    const flashlightSpot = { x: 30, y: 250, w: 30, h: 24 };
-    const vials = [180, 360, 540, 720].map((x, i) => ({ x, y: 190, w: 24, h: 54, id: i, curado: false }));
-    const doorX = 760;
+    // Límites del cuarto (el jugador ya no camina solo por una línea de piso:
+    // puede moverse por todo este rectángulo, incluido acercarse a la pared).
+    const ROOM = { minX: 20, maxX: canvas.width - player.w - 20, minY: 40, maxY: canvas.height - player.h - 30 };
 
-    function cerca(objX, rango = 45) {
-      return Math.abs((player.x + player.w / 2) - objX) < rango;
+    // Cada objeto tiene un "punto de interacción" (ix, iy): ahí es literalmente
+    // donde el jugador debe pararse (cerca, en X y en Y) para poder usarlo.
+    const paintings = [140, 320, 500, 680].map((x, i) => ({
+      x, y: 40, w: 60, h: 80, id: i, ix: x + 30, iy: 130 // justo bajo el marco
+    }));
+    const flashlightSpot = { x: 30, y: 320, w: 30, h: 24, ix: 45, iy: 320 };
+    const vials = [180, 360, 540, 720].map((x, i) => ({
+      x, y: 190, w: 24, h: 54, id: i, curado: false, ix: x + 12, iy: 250 // al pie de la mesa
+    }));
+    const door = { x: 760, y: 160, w: 80, h: 140, ix: 800, iy: 260 };
+
+    function distanciaA(punto) {
+      const cx = player.x + player.w / 2;
+      const cy = player.y + player.h / 2;
+      const dx = cx - punto.ix;
+      const dy = cy - punto.iy;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function cerca(punto, rango = 34) {
+      return distanciaA(punto) < rango;
     }
 
     function manejarInteraccionHacker() {
       // 1) Recoger linterna
-      if (!hasFlashlight && cerca(flashlightSpot.x + flashlightSpot.w / 2, 40)) {
+      if (!hasFlashlight && cerca(flashlightSpot)) {
         ctx.fillStyle = '#eccc68';
         ctx.font = '9px "Press Start 2P"';
-        ctx.fillText("PRESIONA 'E' PARA RECOGER LA LINTERNA", 260, 340);
+        ctx.fillText("PRESIONA 'E' PARA RECOGER LA LINTERNA", 240, 300);
         if (keys['e'] || keys['E']) {
           keys['e'] = false; keys['E'] = false;
           hasFlashlight = true;
           document.getElementById('slot-2').innerText = '🔦';
-          log('🔦 Recogiste la linterna. Presiona "L" cerca de un cuadro para iluminarlo.');
+          log('🔦 Recogiste la linterna. Acércate bien a un cuadro y presiona "L" para iluminarlo.');
         }
-        return;
       }
 
-      // 2) Revisar cuadros
-      const cuadroCercano = paintings.find(p => cerca(p.x + p.w / 2, 40));
+      // 2) Revisar cuadros (hay que estar literalmente frente a uno, no solo alineado en X)
+      const cuadroCercano = paintings.find(p => cerca(p));
       if (cuadroCercano) {
         ctx.fillStyle = '#eccc68';
         ctx.font = '9px "Press Start 2P"';
-        ctx.fillText(hasFlashlight ? "PRESIONA 'L' PARA ILUMINAR" : "NECESITAS UNA LINTERNA", 300, 140);
+        ctx.fillText(hasFlashlight ? "PRESIONA 'L' PARA ILUMINAR" : "NECESITAS UNA LINTERNA", 300, 175);
 
         if ((keys['l'] || keys['L']) && hasFlashlight) {
           keys['l'] = false; keys['L'] = false;
@@ -446,10 +463,10 @@
       }
 
       // 3) Puerta
-      if (cerca(doorX + 40, 50)) {
+      if (cerca(door, 45)) {
         ctx.fillStyle = '#eccc68';
         ctx.font = '10px "Press Start 2P"';
-        ctx.fillText(miPuzzleResuelto ? "PUERTA ABIERTA" : "PRESIONA 'E' PARA INGRESAR CÓDIGO", 260, 140);
+        ctx.fillText(miPuzzleResuelto ? "PUERTA ABIERTA ✅" : "PRESIONA 'E' PARA INGRESAR CÓDIGO", 220, 140);
         if ((keys['e'] || keys['E']) && !miPuzzleResuelto) {
           keys['e'] = false; keys['E'] = false;
           const codigo = prompt('Ingresa el código que encontraste:');
@@ -459,11 +476,11 @@
     }
 
     function manejarInteraccionCientifico() {
-      const vialCercano = vials.find(v => cerca(v.x + v.w / 2, 40));
+      const vialCercano = vials.find(v => cerca(v));
       if (vialCercano && !vialCercano.curado) {
         ctx.fillStyle = '#eccc68';
         ctx.font = '9px "Press Start 2P"';
-        ctx.fillText("PRESIONA 'E' PARA ANALIZAR", 300, 140);
+        ctx.fillText("PRESIONA 'E' PARA ANALIZAR", 300, 175);
 
         if (keys['e'] || keys['E']) {
           keys['e'] = false; keys['E'] = false;
@@ -481,13 +498,18 @@
     function gameLoop() {
       if (keys['ArrowLeft'] || keys['a'] || keys['A']) player.x -= player.speed;
       if (keys['ArrowRight'] || keys['d'] || keys['D']) player.x += player.speed;
-      if (player.x < 10) player.x = 10;
-      if (player.x > canvas.width - player.w - 10) player.x = canvas.width - player.w - 10;
+      if (keys['ArrowUp'] || keys['w'] || keys['W']) player.y -= player.speed;
+      if (keys['ArrowDown'] || keys['s'] || keys['S']) player.y += player.speed;
+
+      if (player.x < ROOM.minX) player.x = ROOM.minX;
+      if (player.x > ROOM.maxX) player.x = ROOM.maxX;
+      if (player.y < ROOM.minY) player.y = ROOM.minY;
+      if (player.y > ROOM.maxY) player.y = ROOM.maxY;
 
       // Fondo
       ctx.fillStyle = '#1e272e';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      // Piso
+      // Zona de piso (visual, ya no limita el movimiento)
       ctx.fillStyle = '#485460';
       ctx.fillRect(0, 300, canvas.width, 80);
 
@@ -506,9 +528,9 @@
         }
         // Puerta
         ctx.fillStyle = miPuzzleResuelto ? '#2ed573' : '#d2dae2';
-        ctx.fillRect(doorX, 160, 80, 140);
+        ctx.fillRect(door.x, door.y, door.w, door.h);
         ctx.fillStyle = '#000';
-        ctx.fillRect(doorX + 10, 170, 60, 120);
+        ctx.fillRect(door.x + 10, door.y + 10, door.w - 20, door.h - 20);
 
         manejarInteraccionHacker();
       } else {
@@ -525,14 +547,14 @@
         manejarInteraccionCientifico();
       }
 
-      // Jugador
+      // Jugador (ahora se dibuja en su x,y libres, no en una línea fija)
       drawPlayer(ctx, player.x, player.y, esHacker ? '#70a1ff' : '#2ed573');
 
       // Aviso de linterna encendida
       if (hasFlashlight && linternaEncendida) {
         ctx.fillStyle = 'rgba(255, 211, 42, 0.15)';
         ctx.beginPath();
-        ctx.arc(player.x + player.w / 2, player.y, 90, 0, Math.PI * 2);
+        ctx.arc(player.x + player.w / 2, player.y + player.h / 2, 90, 0, Math.PI * 2);
         ctx.fill();
       }
 
