@@ -10,13 +10,19 @@ const pool = mysql.createPool({
   port: process.env.DB_PORT,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  // Aiven exige SSL por defecto. Sin esto, la conexión falla o se cuelga.
+  // Para producción "en serio" lo ideal es usar el CA cert que te da Aiven
+  // (ssl: { ca: fs.readFileSync('ca.pem') }), pero para el proyecto esto basta.
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // Probar la conexión
 pool.getConnection()
   .then(connection => {
-    console.log('Conexión exitosa a la Base de Datos MySQL');
+    console.log('✅ Conexión exitosa a la Base de Datos MySQL (Aiven)');
     connection.release();
   })
   .catch(err => {
