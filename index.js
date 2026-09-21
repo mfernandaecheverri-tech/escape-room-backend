@@ -96,17 +96,40 @@ app.post('/api/acertijos/:id/verificar', async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: 'Acertijo no encontrado' });
 
     const acertijo = rows[0];
-    const esCorrecto = String(respuesta || '').trim() === String(acertijo.respuesta_codigo).trim();
+    const esCorrecto = String(respuesta || '').trim().toLowerCase() === String(acertijo.respuesta_codigo).trim().toLowerCase();
+
+    let salaCompleta = false;
 
     if (jugador_sala_id) {
-      await pool.query(
-        `INSERT INTO historial_acciones (sala_id, jugador_sala_id, accion_descripcion, es_exitoso)
-         SELECT sala_id, ?, ?, ? FROM jugadores_sala WHERE id = ?`,
-        [jugador_sala_id, `Intento de acertijo #${acertijo.id}`, esCorrecto, jugador_sala_id]
-      );
+      const [jsRows] = await pool.query('SELECT sala_id FROM jugadores_sala WHERE id = ?', [jugador_sala_id]);
+      const salaId = jsRows[0]?.sala_id;
+
+      if (salaId) {
+        await pool.query(
+          'INSERT INTO historial_acciones (sala_id, jugador_sala_id, accion_descripcion, es_exitoso) VALUES (?, ?, ?, ?)',
+          [salaId, jugador_sala_id, `Intento de acertijo #${acertijo.id}`, esCorrecto]
+        );
+
+        if (esCorrecto) {
+          // Cooperativo: la sala solo se marca RESUELTO cuando TODOS los
+          // jugadores de la sala ya tuvieron al menos un intento exitoso.
+          const [[{ totalJugadores }]] = await pool.query(
+            'SELECT COUNT(*) AS totalJugadores FROM jugadores_sala WHERE sala_id = ?', [salaId]
+          );
+          const [[{ totalResueltos }]] = await pool.query(
+            `SELECT COUNT(DISTINCT jugador_sala_id) AS totalResueltos
+             FROM historial_acciones WHERE sala_id = ? AND es_exitoso = TRUE`,
+            [salaId]
+          );
+          if (totalJugadores > 0 && totalResueltos >= totalJugadores) {
+            await pool.query('UPDATE salas SET estado = ?, fecha_fin = NOW() WHERE id = ?', ['RESUELTO', salaId]);
+            salaCompleta = true;
+          }
+        }
+      }
     }
 
-    res.json({ correcto: esCorrecto, puntos: esCorrecto ? acertijo.puntos_otorgados : 0 });
+    res.json({ correcto: esCorrecto, puntos: esCorrecto ? acertijo.puntos_otorgados : 0, salaCompleta });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -153,7 +176,15 @@ app.post('/api/salas/unirse', async (req, res) => {
     );
     if (existente.length > 0) {
       await pool.query('UPDATE jugadores_sala SET esta_conectado = TRUE WHERE id = ?', [existente[0].id]);
-      return res.json({ sala, min_jugadores: juego.min_jugadores, rol: existente[0] });
+      return res.json({
+        sala,
+        min_jugadores: juego.min_jugadores,
+        rol: {
+          id: existente[0].rol_juego_id,
+          nombre_rol: existente[0].nombre_rol,
+          jugador_sala_id: existente[0].id
+        }
+      });
     }
 
     // Asignación de rol en el SERVIDOR (no al azar en el cliente): tomamos el primer
@@ -172,12 +203,16 @@ app.post('/api/salas/unirse', async (req, res) => {
     }
     const rolAsignado = rolesLibres[0];
 
-    await pool.query(
+    const [result] = await pool.query(
       'INSERT INTO jugadores_sala (sala_id, usuario_id, rol_juego_id, esta_listo, esta_conectado) VALUES (?, ?, ?, TRUE, TRUE)',
       [sala.id, usuario_id, rolAsignado.id]
     );
 
-    res.json({ sala, min_jugadores: juego.min_jugadores, rol: rolAsignado });
+    res.json({
+      sala,
+      min_jugadores: juego.min_jugadores,
+      rol: { ...rolAsignado, jugador_sala_id: result.insertId }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -249,4 +284,4 @@ app.get('/api/salas/:salaId/inventario/:usuarioId', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));

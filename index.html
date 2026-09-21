@@ -99,8 +99,31 @@
   let acertijoActual = null;
   let loopInterval = null;
 
-  const player = { x: 80, y: 270, size: 28, speed: 5, color: '#ff4757' };
+  // ------------------------------------------------------------------
+  // DISEÑO DEL NIVEL. El backend NUNCA envía respuesta_codigo al cliente
+  // (por seguridad), así que lo que el jugador "descubre" explorando el
+  // cuarto se define aquí, y TIENE que coincidir con lo que guardaste en
+  // la columna respuesta_codigo de la tabla `acertijos` para cada rol.
+  // Si cambias la respuesta en la BD, cambia también estas constantes.
+  // ------------------------------------------------------------------
+  const PAINTING_ANSWER = '1984';    // debe == respuesta_codigo del acertijo del Hacker
+  const PAINTING_CORRECT_INDEX = 2;  // cuál de los 4 cuadros (0 a 3) esconde el código
+  const VIAL_ANSWER = '1984';        // debe == respuesta_codigo del acertijo del Científico
+  const VIAL_CORRECT_INDEX = 1;      // cuál de los 4 viales (0 a 3) es el correcto
+  const VIAL_PISTAS_FALSAS = [
+    'Muestra A: cepa inestable, no sirve.',
+    'Muestra B: contaminada, descartar.',
+    'Muestra C: concentración incorrecta.',
+    'Muestra D: caducada hace semanas.'
+  ];
+
+  const player = { x: 80, y: 258, w: 28, h: 42, speed: 4 };
   const keys = {};
+  let animFrame = 0;
+  let animTimer = 0;
+  let hasFlashlight = false;
+  let linternaEncendida = false;
+  let miPuzzleResuelto = false;
 
   window.addEventListener('keydown', e => keys[e.key] = true);
   window.addEventListener('keyup', e => keys[e.key] = false);
@@ -211,8 +234,6 @@
     }
   }
 
-  // El rol YA NO se elige al azar en el cliente: lo asigna el backend
-  // (primer rol libre de la sala), evitando choques con el UNIQUE(sala_id, rol_juego_id).
   async function unirseASalaLobby() {
     const codigo_acceso = document.getElementById('join-codigo').value;
     if (!codigo_acceso) return alert('Ingresa el código de sala');
@@ -227,7 +248,7 @@
 
       if (res.ok) {
         salaActual = data.sala;
-        rolActual = data.rol;
+        rolActual = data.rol; // incluye { id, nombre_rol, jugador_sala_id }
         document.getElementById('lbl-codigo').innerText = salaActual.codigo_acceso;
         document.getElementById('lbl-rol').innerText = rolActual.nombre_rol;
         document.getElementById('wait-codigo').innerText = salaActual.codigo_acceso;
@@ -246,12 +267,12 @@
   function cargarInventarioRol(nombreRol) {
     if (nombreRol === 'Hacker') {
       document.getElementById('slot-1').innerText = '💻';
-      document.getElementById('slot-2').innerText = '🔦';
-      log(`Rol asignado: Hacker. Objetos equipados: Terminal UV y Linterna.`);
+      document.getElementById('slot-2').innerText = '-'; // la linterna se RECOGE en el juego, no viene equipada
+      log('Rol asignado: Hacker. Busca la linterna en el cuarto antes de revisar los cuadros.');
     } else {
       document.getElementById('slot-1').innerText = '🧪';
       document.getElementById('slot-2').innerText = '📄';
-      log(`Rol asignado: Científico. Objetos equipados: Poción y Pista.`);
+      log('Rol asignado: Científico. Analiza los viales de la mesa para encontrar la cura.');
     }
   }
 
@@ -283,8 +304,7 @@
       if (res.ok) {
         clearInterval(loopInterval);
         cambiarPantalla('screen-game');
-        log("¡SALA INICIADA! Camina hacia la puerta con A/D e interactúa con 'E'.");
-        await cargarPrimeraEtapa();
+        await cargarMiEtapaYAcertijo();
         iniciarJuegoCanvas();
       } else {
         const data = await res.json();
@@ -296,30 +316,29 @@
   }
 
   // --- 4. ACERTIJOS REALES (desde la BD, no quemados en el JS) ---
-  async function cargarPrimeraEtapa() {
+  async function cargarMiEtapaYAcertijo() {
     try {
       const resEtapas = await fetch(`/api/juegos/${salaActual.juego_id}/etapas`);
       const etapas = await resEtapas.json();
-      etapaActual = etapas[0];
-      if (!etapaActual) { log('No hay etapas configuradas para este juego.'); return; }
 
-      const resAcertijos = await fetch(`/api/etapas/${etapaActual.id}/acertijos?rol_juego_id=${rolActual.id}`);
-      const acertijos = await resAcertijos.json();
-      acertijoActual = acertijos[0] || null;
-
-      if (acertijoActual) {
-        log(`Etapa 1: ${etapaActual.titulo_etapa}. Pista: "${acertijoActual.pista_texto}"`);
+      for (const etapa of etapas) {
+        const resAc = await fetch(`/api/etapas/${etapa.id}/acertijos?rol_juego_id=${rolActual.id}`);
+        const acertijos = await resAc.json();
+        if (acertijos.length > 0) {
+          etapaActual = etapa;
+          acertijoActual = acertijos[0];
+          log(`Tu etapa: "${etapa.titulo_etapa}". Usa A/D para moverte y 'E' para interactuar.`);
+          return;
+        }
       }
+      log('No se encontró un acertijo para tu rol en este juego.');
     } catch (e) {
-      log('Error al cargar la etapa: ' + e.message);
+      log('Error al cargar tu etapa: ' + e.message);
     }
   }
 
   async function verificarAcertijoActual(respuestaUsuario) {
-    if (!acertijoActual) {
-      log('No hay un acertijo activo para verificar.');
-      return;
-    }
+    if (!acertijoActual || miPuzzleResuelto) return;
     try {
       const res = await fetch(`/api/acertijos/${acertijoActual.id}/verificar`, {
         method: 'POST',
@@ -329,79 +348,193 @@
       const data = await res.json();
 
       if (data.correcto) {
-        alert(`¡CÓDIGO CORRECTO! +${data.puntos} puntos 🎉`);
-        log(`🎉 Acertijo resuelto. Puntos: ${data.puntos}`);
-        await finalizarPartida('RESUELTO');
+        miPuzzleResuelto = true;
+        log(`🎉 ¡Resolviste tu parte! Puntos: ${data.puntos}`);
+        if (data.salaCompleta) {
+          document.getElementById('end-title').innerText = '¡ESCAPARON TODOS! 🎉';
+          document.getElementById('end-msg').innerText = `Sala ${salaActual.codigo_acceso} — estado final: RESUELTO`;
+          cambiarPantalla('screen-end');
+        } else {
+          alert('¡Resolviste tu parte! Esperando a que tu compañero(a) también lo logre...');
+        }
       } else {
-        alert('Código incorrecto.');
         log('❌ Intento fallido de código.');
+        alert('Código incorrecto.');
       }
     } catch (e) {
       log('Error al verificar el acertijo: ' + e.message);
     }
   }
 
-  async function finalizarPartida(estado) {
-    try {
-      await fetch(`/api/salas/${salaActual.id}/finalizar`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado })
-      });
-      document.getElementById('end-title').innerText = estado === 'RESUELTO' ? '¡HAS ESCAPADO! 🎉' : 'SALA FALLIDA';
-      document.getElementById('end-msg').innerText = `Sala ${salaActual.codigo_acceso} — estado final: ${estado}`;
-      cambiarPantalla('screen-end');
-    } catch (e) {
-      log('Error al finalizar la partida: ' + e.message);
+  // --- 5. GAMEPLAY EN CANVAS ---
+  function drawPlayer(ctx, x, y, colorCuerpo) {
+    const moviendose = keys['ArrowLeft'] || keys['a'] || keys['A'] || keys['ArrowRight'] || keys['d'] || keys['D'];
+    animTimer++;
+    if (moviendose && animTimer % 8 === 0) animFrame = 1 - animFrame;
+
+    // Cabeza
+    ctx.fillStyle = '#f7c9a3';
+    ctx.fillRect(x + 6, y, 16, 14);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x + 10, y + 5, 3, 3);
+    ctx.fillRect(x + 16, y + 5, 3, 3);
+    // Cuerpo
+    ctx.fillStyle = colorCuerpo;
+    ctx.fillRect(x + 4, y + 14, 20, 16);
+    // Brazos
+    ctx.fillRect(x, y + 16, 4, 12);
+    ctx.fillRect(x + 24, y + 16, 4, 12);
+    // Piernas (con animación de caminar)
+    ctx.fillStyle = '#2f3640';
+    if (animFrame === 0) {
+      ctx.fillRect(x + 6, y + 30, 6, 12);
+      ctx.fillRect(x + 16, y + 30, 6, 12);
+    } else {
+      ctx.fillRect(x + 4, y + 30, 6, 12);
+      ctx.fillRect(x + 18, y + 30, 6, 12);
     }
   }
 
-  // --- 5. GAMEPLAY EN CANVAS ---
   function iniciarJuegoCanvas() {
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const esHacker = rolActual.nombre_rol === 'Hacker';
+
+    const paintings = [140, 320, 500, 680].map((x, i) => ({ x, y: 40, w: 60, h: 80, id: i }));
+    const flashlightSpot = { x: 30, y: 250, w: 30, h: 24 };
+    const vials = [180, 360, 540, 720].map((x, i) => ({ x, y: 190, w: 24, h: 54, id: i, curado: false }));
+    const doorX = 760;
+
+    function cerca(objX, rango = 45) {
+      return Math.abs((player.x + player.w / 2) - objX) < rango;
+    }
+
+    function manejarInteraccionHacker() {
+      // 1) Recoger linterna
+      if (!hasFlashlight && cerca(flashlightSpot.x + flashlightSpot.w / 2, 40)) {
+        ctx.fillStyle = '#eccc68';
+        ctx.font = '9px "Press Start 2P"';
+        ctx.fillText("PRESIONA 'E' PARA RECOGER LA LINTERNA", 260, 340);
+        if (keys['e'] || keys['E']) {
+          keys['e'] = false; keys['E'] = false;
+          hasFlashlight = true;
+          document.getElementById('slot-2').innerText = '🔦';
+          log('🔦 Recogiste la linterna. Presiona "L" cerca de un cuadro para iluminarlo.');
+        }
+        return;
+      }
+
+      // 2) Revisar cuadros
+      const cuadroCercano = paintings.find(p => cerca(p.x + p.w / 2, 40));
+      if (cuadroCercano) {
+        ctx.fillStyle = '#eccc68';
+        ctx.font = '9px "Press Start 2P"';
+        ctx.fillText(hasFlashlight ? "PRESIONA 'L' PARA ILUMINAR" : "NECESITAS UNA LINTERNA", 300, 140);
+
+        if ((keys['l'] || keys['L']) && hasFlashlight) {
+          keys['l'] = false; keys['L'] = false;
+          linternaEncendida = true;
+          if (cuadroCercano.id === PAINTING_CORRECT_INDEX) {
+            ctx.fillStyle = '#2ed573';
+            ctx.font = '14px "Press Start 2P"';
+            ctx.fillText(PAINTING_ANSWER, cuadroCercano.x, cuadroCercano.y - 10);
+            log(`✨ ¡Encontraste algo detrás del cuadro! Código: ${PAINTING_ANSWER}`);
+          } else {
+            log('El cuadro está vacío por detrás. No hay nada.');
+          }
+        }
+      }
+
+      // 3) Puerta
+      if (cerca(doorX + 40, 50)) {
+        ctx.fillStyle = '#eccc68';
+        ctx.font = '10px "Press Start 2P"';
+        ctx.fillText(miPuzzleResuelto ? "PUERTA ABIERTA" : "PRESIONA 'E' PARA INGRESAR CÓDIGO", 260, 140);
+        if ((keys['e'] || keys['E']) && !miPuzzleResuelto) {
+          keys['e'] = false; keys['E'] = false;
+          const codigo = prompt('Ingresa el código que encontraste:');
+          if (codigo) verificarAcertijoActual(codigo);
+        }
+      }
+    }
+
+    function manejarInteraccionCientifico() {
+      const vialCercano = vials.find(v => cerca(v.x + v.w / 2, 40));
+      if (vialCercano && !vialCercano.curado) {
+        ctx.fillStyle = '#eccc68';
+        ctx.font = '9px "Press Start 2P"';
+        ctx.fillText("PRESIONA 'E' PARA ANALIZAR", 300, 140);
+
+        if (keys['e'] || keys['E']) {
+          keys['e'] = false; keys['E'] = false;
+          if (vialCercano.id === VIAL_CORRECT_INDEX) {
+            vialCercano.curado = true;
+            log('🧪 ¡Encontraste la cura correcta!');
+            verificarAcertijoActual(VIAL_ANSWER);
+          } else {
+            log(`🧪 ${VIAL_PISTAS_FALSAS[vialCercano.id] || 'No coincide.'}`);
+          }
+        }
+      }
+    }
 
     function gameLoop() {
       if (keys['ArrowLeft'] || keys['a'] || keys['A']) player.x -= player.speed;
       if (keys['ArrowRight'] || keys['d'] || keys['D']) player.x += player.speed;
-
       if (player.x < 10) player.x = 10;
-      if (player.x > canvas.width - 40) player.x = canvas.width - 40;
+      if (player.x > canvas.width - player.w - 10) player.x = canvas.width - player.w - 10;
 
       // Fondo
       ctx.fillStyle = '#1e272e';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
       // Piso
       ctx.fillStyle = '#485460';
       ctx.fillRect(0, 300, canvas.width, 80);
 
-      // Puerta Principal
-      ctx.fillStyle = '#d2dae2';
-      ctx.fillRect(750, 160, 80, 140);
-      ctx.fillStyle = '#000';
-      ctx.fillRect(760, 170, 60, 120);
-
-      // Colisión / Interacción
-      if (Math.abs(player.x - 760) < 50) {
-        ctx.fillStyle = '#eccc68';
-        ctx.font = '10px "Press Start 2P"';
-        ctx.fillText("PRESIONA 'E' PARA INGRESAR CÓDIGO", 300, 140);
-
-        if (keys['e'] || keys['E']) {
-          keys['e'] = false;
-          keys['E'] = false;
-          const pista = acertijoActual ? acertijoActual.pista_texto : 'Ingresa el código de acceso:';
-          const codigo = prompt(pista);
-          if (codigo) verificarAcertijoActual(codigo);
+      if (esHacker) {
+        // Cuadros en la pared
+        paintings.forEach(p => {
+          ctx.fillStyle = '#c8a165';
+          ctx.fillRect(p.x - 4, p.y - 4, p.w + 8, p.h + 8);
+          ctx.fillStyle = '#34495e';
+          ctx.fillRect(p.x, p.y, p.w, p.h);
+        });
+        // Objeto linterna en el piso (si no se ha recogido)
+        if (!hasFlashlight) {
+          ctx.fillStyle = '#ffd32a';
+          ctx.fillRect(flashlightSpot.x, flashlightSpot.y, flashlightSpot.w, flashlightSpot.h);
         }
+        // Puerta
+        ctx.fillStyle = miPuzzleResuelto ? '#2ed573' : '#d2dae2';
+        ctx.fillRect(doorX, 160, 80, 140);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(doorX + 10, 170, 60, 120);
+
+        manejarInteraccionHacker();
+      } else {
+        // Mesa de laboratorio
+        ctx.fillStyle = '#57606f';
+        ctx.fillRect(140, 250, 660, 20);
+        vials.forEach(v => {
+          ctx.fillStyle = v.curado ? '#2ed573' : '#ff6b81';
+          ctx.fillRect(v.x, v.y, v.w, v.h);
+          ctx.fillStyle = '#dfe4ea';
+          ctx.fillRect(v.x + 4, v.y - 6, v.w - 8, 8);
+        });
+
+        manejarInteraccionCientifico();
       }
 
       // Jugador
-      ctx.fillStyle = player.color;
-      ctx.fillRect(player.x, player.y, player.size, player.size);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(player.x + 18, player.y + 6, 6, 6); // Ojo
+      drawPlayer(ctx, player.x, player.y, esHacker ? '#70a1ff' : '#2ed573');
+
+      // Aviso de linterna encendida
+      if (hasFlashlight && linternaEncendida) {
+        ctx.fillStyle = 'rgba(255, 211, 42, 0.15)';
+        ctx.beginPath();
+        ctx.arc(player.x + player.w / 2, player.y, 90, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       requestAnimationFrame(gameLoop);
     }
