@@ -99,10 +99,11 @@
     document.getElementById(id).classList.add('active');
   }
 
-  // --- 1. AUTENTICACIÓN ---
-  async function iniciarSesion() {
-    const username = document.getElementById('auth-username').value;
-    if(!username) return alert('Ingresa un usuario');
+  // --- 1. AUTENTICACIÓN MEJORADA ---
+async function iniciarSesion() {
+  const username = document.getElementById('auth-username').value;
+  if(!username) return alert('Ingresa un usuario');
+  try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -110,26 +111,59 @@
     });
     const data = await res.json();
     if(res.ok) {
+      // Guardamos la información completa del usuario
       usuarioActual = data.usuario;
       document.getElementById('lbl-user').innerText = usuarioActual.username;
-      log(`Sesión iniciada como: ${usuarioActual.username}`);
-      cargarJuegosYRoles();
+      log(`Sesión iniciada como: ${usuarioActual.username} (ID: ${usuarioActual.id})`);
+      await cargarJuegos();
       cambiarPantalla('screen-lobby-select');
-    } else { alert(data.error); }
+    } else { 
+      alert(data.error || 'Error al iniciar sesión'); 
+    }
+  } catch(e) { 
+    log("Error de conexión: " + e.message);
+    alert("Error al conectar con la API: " + e.message); 
+  }
+}
+
+// --- 2. CREACIÓN DE SALA MEJORADA ---
+async function crearSalaLobby() {
+  const juego_id = document.getElementById('select-juegos').value;
+  
+  if(!usuarioActual || !usuarioActual.id) {
+    alert('Error: No se detectó el ID del usuario. Por favor vuelve a iniciar sesión.');
+    return;
   }
 
-  async function registrarUsuario() {
-    const username = document.getElementById('auth-username').value;
-    if(!username) return alert('Ingresa un usuario');
-    const res = await fetch('/api/auth/registro', {
+  if(!juego_id) {
+    alert('Selecciona un juego válido de la lista');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/salas/crear', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ username, email: `${username}@escaperoom.com` })
+      body: JSON.stringify({ juego_id: parseInt(juego_id), anfitrion_id: usuarioActual.id })
     });
+    
     const data = await res.json();
-    if(res.ok) { alert('Usuario creado, ahora haz clic en ENTRAR'); }
-    else { alert(data.error); }
+
+    if(res.ok) {
+      // Llenamos el input de código automáticamente
+      document.getElementById('join-codigo').value = data.codigo_acceso;
+      log(`¡Sala creada con éxito! Código: ${data.codigo_acceso}`);
+      
+      // Intentamos unirme automáticamente
+      unirseASalaLobby();
+    } else {
+      log(`Error al crear sala: ${data.error}`);
+      alert("Error del servidor: " + data.error);
+    }
+  } catch(e) {
+    log("Error de red al crear sala: " + e.message);
   }
+}
 
   // --- 2. JUEGOS Y SALAS DE ESPERA ---
   async function cargarJuegosYRoles() {
@@ -142,20 +176,6 @@
     const roles = await resRoles.json();
     const selectRoles = document.getElementById('select-roles');
     selectRoles.innerHTML = roles.map(r => `<option value="${r.id}">${r.nombre_rol} (${r.nombre_juego})</option>`).join('');
-  }
-
-  async function crearSalaLobby() {
-    const juego_id = document.getElementById('select-juegos').value;
-    const res = await fetch('/api/salas/crear', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ juego_id, anfitrion_id: usuarioActual.id })
-    });
-    const data = await res.json();
-    if(res.ok) {
-      document.getElementById('join-codigo').value = data.codigo_acceso;
-      log(`Sala creada con código: ${data.codigo_acceso}. Ahora elige tu rol y únete.`);
-    }
   }
 
   async function unirseASalaLobby() {
