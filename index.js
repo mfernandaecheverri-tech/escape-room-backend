@@ -120,8 +120,10 @@ app.post('/api/salas/crear', async (req, res) => {
     const [result] = await pool.query(
       // OJO: el ENUM de "estado" es EN_ESPERA / EN_PROGRESO / RESUELTO / FALLIDO / CANCELADA.
       // "ESPERANDO" no existe en el ENUM y hacía fallar el insert.
-      'INSERT INTO salas (codigo_acceso, juego_id, anfitrion_id, estado) VALUES (?, ?, ?, "EN_ESPERA")',
-      [codigo, juego_id, anfitrion_id]
+      // Usamos ? en vez de comillas dobles porque Aiven corre con sql_mode=ANSI_QUOTES,
+      // donde "texto" se interpreta como nombre de columna, no como string.
+      'INSERT INTO salas (codigo_acceso, juego_id, anfitrion_id, estado) VALUES (?, ?, ?, ?)',
+      [codigo, juego_id, anfitrion_id, 'EN_ESPERA']
     );
     res.json({ id: result.insertId, codigo_acceso: codigo });
   } catch (err) {
@@ -200,8 +202,8 @@ app.get('/api/salas/:id/jugadores', async (req, res) => {
 app.put('/api/salas/:id/iniciar', async (req, res) => {
   try {
     await pool.query(
-      'UPDATE salas SET estado = "EN_PROGRESO", fecha_inicio = NOW() WHERE id = ?',
-      [req.params.id]
+      'UPDATE salas SET estado = ?, fecha_inicio = NOW() WHERE id = ?',
+      ['EN_PROGRESO', req.params.id]
     );
     res.json({ status: 'ok' });
   } catch (err) {
